@@ -2,52 +2,144 @@
 
 A comprehensive learning activity management platform for university lecturers in Hong Kong, featuring AI-powered activity generation and student response analysis.
 
-## Features
+## 🚀 Quick Start | 快速开始
 
-- **User Management**: Teacher registration/login with encrypted passwords, admin dashboard
-- **Course Management**: Create courses, import student information (manual/CSV)
-- **Learning Activities**: Create polls, short-answer questions, and word clouds
-- **AI Integration**: GPT-4 powered activity generation and automatic answer grouping
-- **Responsive Design**: Works on PC (1920×1080) and mobile devices (iPhone 12)
+**New users? Start here! | 新用户从这里开始！**
 
-## Technology Stack
+### 30-Second Setup | 30秒快速安装
+👉 **[QUICK_START_30SEC.md](QUICK_START_30SEC.md)** - Get running in 30 seconds | 30秒快速启动
 
-- **Backend**: Python 3.8+, Flask
-- **Database**: MongoDB Cloud
-- **AI**: OpenAI GPT-4.1-MINI
-- **Frontend**: HTML, CSS, JavaScript (Responsive Design)
+### Complete Guide | 完整指南
+📘 **[QUICK_START_GUIDE.md](QUICK_START_GUIDE.md)** - Detailed installation guide (中英对照) | 详细安装指南
 
-## Installation
+### MongoDB Setup | MongoDB 配置
+🗄️ **[MONGODB_SETUP_GUIDE.md](MONGODB_SETUP_GUIDE.md)** - MongoDB Atlas configuration | MongoDB Atlas 配置指南
 
-1. **Clone the repository**
+---
+
+## 📚 Documentation | 文档索引
+
+### For Users | 用户文档
+- 🚀 **[Quick Start - 30 Seconds](QUICK_START_30SEC.md)** - Fastest way to get started
+- 📖 **[Complete Setup Guide](QUICK_START_GUIDE.md)** - Step-by-step installation
+- 🗄️ **[MongoDB Setup](MONGODB_SETUP_GUIDE.md)** - Database configuration
+- 🧪 **[Testing Guide](TESTING_COMPLETE_GUIDE.md)** - How to test features
+
+### For Developers | 开发者文档
+- 🎨 **[Student Interface Design](STUDENT_INTERFACE_FINAL.md)** - UI/UX documentation
+- 🐛 **[Bug Fix Records](DASHBOARD_COURSE_DETAIL_FIX.md)** - Error fixes log
+- 📋 **[System Enhancement Plan](SYSTEM_ENHANCEMENT_PLAN.md)** - Roadmap
+- 🔧 **[Project Delivery Guide](PROJECT_DELIVERY.md)** - Deployment guide
+
+---
+
+## ✨ Features | 功能特点
+
+### 👨‍🎓 Student Interface | 学生界面
+- ✅ **Dashboard** - Learning statistics and progress tracking | 学习统计和进度跟踪
+- ✅ **My Courses** - Enrolled course management | 已选课程管理
+- ✅ **Browse Courses** - Discover and enroll in courses | 浏览和选课
+- ✅ **Course Details** - View activities and materials | 查看活动和资料
+- ✅ **Activities** - Participate in polls, quizzes, word clouds | 参与投票、测验、词云
+- 🔄 **Leaderboard** - Gamification (coming soon) | 排行榜（即将推出）
+
+### 👨‍🏫 Teacher Interface | 教师界面
+- ✅ **Course Management** - Create and manage courses | 创建和管理课程
+- ✅ **Activity Creation** - Polls, short answers, word clouds | 投票、简答、词云
+- ✅ **AI Generation** - GPT-4 powered content creation | GPT-4 驱动的内容生成
+- ✅ **Student Management** - View enrolled students | 查看选课学生
+- ✅ **Response Analysis** - View and analyze submissions | 查看和分析回答
+
+### 🔐 Admin Interface | 管理员界面
+- ✅ **User Management** - Manage all users | 管理所有用户
+- ✅ **System Overview** - Platform statistics | 平台统计
+
+---
+
+## 🛠️ Technology Stack | 技术栈
+
+- **Backend | 后端**: Python 3.8+, Flask 3.0.0
+- **Database | 数据库**: MongoDB Atlas (Cloud)
+- **AI | 人工智能**: OpenAI GPT-4 / GitHub Models
+- **Frontend | 前端**: HTML5, CSS3, Jinja2 Templates
+- **Authentication | 认证**: bcrypt password hashing
+
+---
+
+## 📦 Installation | 安装
+
+### Quick Method | 快速方法
+
 ```bash
-git clone <repository-url>
+# 1. Clone repository | 克隆仓库
+git clone https://github.com/COMP5241-2526Sem1/groupproject-team_3.git
 cd groupproject-team_3
-```
+git checkout ZmhPre
 
-2. **Install dependencies**
-```bash
+# 2. Create virtual environment | 创建虚拟环境
+python -m venv Project3
+.\Project3\Scripts\Activate.ps1  # Windows
+source Project3/bin/activate      # Mac/Linux
+
+# 3. Install dependencies | 安装依赖
 pip install -r requirements.txt
-```
 
-3. **Configure environment variables**
-   - Copy `.env.example` to `.env`
-   - Fill in your MongoDB Cloud connection string
-   - Add your OpenAI API key
-   - Generate a secure SECRET_KEY
+# 4. Configure .env | 配置环境变量
+# Create .env file and add your MongoDB URI
+# 创建 .env 文件并添加 MongoDB URI
 
-```bash
-cp .env.example .env
-# Edit .env with your credentials
-```
-
-4. **Initialize the database**
-```bash
+# 5. Initialize database | 初始化数据库
 python init_db.py
+python seed_database.py
+
+# 6. Run application | 运行应用
+python app.py
 ```
 
-This will create:
-- Default admin account (username: admin, password: admin123)
+### Detailed Instructions | 详细说明
+See **[QUICK_START_GUIDE.md](QUICK_START_GUIDE.md)** for complete installation guide.
+
+---
+
+## 🔑 Test Accounts | 测试账号
+
+### Student | 学生
+```
+Username: student_demo
+Password: student123
+```
+
+### Teacher | 教师
+```
+Username: teacher_demo
+Password: teacher123
+```
+
+### Admin | 管理员
+```
+Username: admin
+Password: admin123
+```
+
+---
+
+## 📱 Usage | 使用方法
+
+### Start Application | 启动应用
+```bash
+# Activate virtual environment | 激活虚拟环境
+.\Project3\Scripts\Activate.ps1  # Windows
+source Project3/bin/activate      # Mac/Linux
+
+# Run application | 运行应用
+python app.py
+```
+
+### Access | 访问
+Open browser and visit | 打开浏览器访问:
+```
+http://localhost:5000
+```
 - Required database collections and indexes
 
 ## Running the Application
