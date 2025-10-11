@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Learning Activity System{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 2rem;">
+    <div class="flex-between mb-4">
+        <h1>Teacher Dashboard</h1>
+        <div class="flex gap-2">
+            <a href="{{ url_for('course.create_course') }}" class="btn btn-primary">
+                ➕ New Course
+            </a>
+            <a href="{{ url_for('activity.create_activity') }}" class="btn btn-success">
+                📝 New Activity
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="grid grid-3 mb-4">
+        <div class="stat-card">
+            <div class="stat-value">{{ courses|length }}</div>
+            <div class="stat-label">Total Courses</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+            <div class="stat-value">
+                {% set total_activities = courses|sum(attribute='activity_count') %}
+                {{ total_activities }}
+            </div>
+            <div class="stat-label">Total Activities</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+            <div class="stat-value">
+                {% set total_students = courses|sum(attribute='student_count') %}
+                {{ total_students }}
+            </div>
+            <div class="stat-label">Total Students</div>
+        </div>
+    </div>
+    
+    <!-- Courses List -->
+    <div class="card">
+        <div class="card-header">
+            <h2>My Courses</h2>
+        </div>
+        <div class="card-body">
+            {% if courses %}
+            <div class="grid grid-2">
+                {% for course in courses %}
+                <div class="card" style="border-left: 4px solid var(--primary-color);">
+                    <h3>{{ course.name }}</h3>
+                    <p style="color: #6b7280; margin: 0.5rem 0;">
+                        Course Code: <strong>{{ course.code }}</strong>
+                    </p>
+                    <p style="color: #6b7280; margin: 0.5rem 0;">
+                        {{ course.student_count }} students | {{ course.activity_count }} activities
+                    </p>
+                    
+                    {% if course.description %}
+                    <p style="margin: 0.5rem 0;">{{ course.description }}</p>
+                    {% endif %}
+                    
+                    <div class="flex gap-2 mt-3">
+                        <a href="{{ url_for('course.course_detail', course_id=course._id) }}" 
+                           class="btn btn-primary btn-sm">
+                            View Details
+                        </a>
+                        <a href="{{ url_for('activity.create_activity') }}?course_id={{ course._id }}" 
+                           class="btn btn-success btn-sm">
+                            Create Activity
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 3rem; color: #6b7280;">
+                <p style="font-size: 1.25rem; margin-bottom: 1rem;">📚 No courses yet</p>
+                <p>Create your first course to get started!</p>
+                <a href="{{ url_for('course.create_course') }}" class="btn btn-primary mt-3">
+                    Create Course
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

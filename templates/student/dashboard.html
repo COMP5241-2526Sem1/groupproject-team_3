@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Welcome, {{ user.username }}!</h1>
+        <p>Student ID: {{ user.student_id }}</p>
+    </div>
+
+    <!-- Statistics -->
+    <div class="grid grid-3 mb-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h3>{{ enrolled_courses|length }}</h3>
+                <p>Enrolled Courses</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body text-center">
+                <h3>{{ total_submissions }}</h3>
+                <p>Total Submissions</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body text-center">
+                <h3>{{ available_courses|length }}</h3>
+                <p>Available Courses</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrolled Courses -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>My Courses</h2>
+        </div>
+        <div class="card-body">
+            {% if enrolled_courses %}
+            <div class="grid grid-2">
+                {% for course in enrolled_courses %}
+                <div class="card">
+                    <div class="card-body">
+                        <h3>{{ course.name }}</h3>
+                        <p><strong>Code:</strong> {{ course.code }}</p>
+                        <p>{{ course.description }}</p>
+                        <div style="margin-top: 1rem;">
+                            <span class="badge">{{ course.activity_count }} Activities</span>
+                        </div>
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                            <a href="{{ url_for('student.course_detail', course_id=course._id) }}" 
+                               class="btn btn-primary">View Course</a>
+                            <button onclick="unenrollCourse('{{ course._id }}')" 
+                                    class="btn btn-danger btn-sm">Unenroll</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <p>You are not enrolled in any courses yet. Browse available courses below!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Available Courses -->
+    {% if available_courses %}
+    <div class="card">
+        <div class="card-header">
+            <h2>Available Courses</h2>
+        </div>
+        <div class="card-body">
+            <div class="grid grid-2">
+                {% for course in available_courses %}
+                <div class="card">
+                    <div class="card-body">
+                        <h3>{{ course.name }}</h3>
+                        <p><strong>Code:</strong> {{ course.code }}</p>
+                        <p>{{ course.description }}</p>
+                        <div style="margin-top: 1rem;">
+                            <button onclick="enrollCourse('{{ course._id }}')" 
+                                    class="btn btn-success">Enroll Now</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+async function enrollCourse(courseId) {
+    if (!confirm('Do you want to enroll in this course?')) return;
+    
+    showLoading();
+    
+    try {
+        const result = await apiCall(
+            `/student/enroll/${courseId}`,
+            'POST'
+        );
+        
+        hideLoading();
+        
+        if (result.success) {
+            showAlert(result.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to enroll in course', 'danger');
+    }
+}
+
+async function unenrollCourse(courseId) {
+    if (!confirm('Are you sure you want to unenroll from this course?')) return;
+    
+    showLoading();
+    
+    try {
+        const result = await apiCall(
+            `/student/unenroll/${courseId}`,
+            'POST'
+        );
+        
+        hideLoading();
+        
+        if (result.success) {
+            showAlert(result.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to unenroll from course', 'danger');
+    }
+}
+</script>
+{% endblock %}

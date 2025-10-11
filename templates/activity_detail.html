@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}{{ activity.title }} - Activity Details{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 2rem;">
+    <!-- Activity Header -->
+    <div class="card mb-4">
+        <div class="card-header flex-between">
+            <div>
+                <h1>{{ activity.title }}</h1>
+                <p style="color: #6b7280; margin: 0.5rem 0;">
+                    Course: <strong>{{ course.name }}</strong> | 
+                    Type: <span class="activity-type activity-{{ activity.type.replace('_', '-') }}">
+                        {% if activity.type == 'poll' %}📊 Poll
+                        {% elif activity.type == 'short_answer' %}✍️ Short Answer
+                        {% else %}☁️ Word Cloud{% endif %}
+                    </span>
+                </p>
+            </div>
+            <button onclick="copyActivityLink('{{ activity.link }}')" class="btn btn-primary">
+                📋 Copy Student Link
+            </button>
+        </div>
+        
+        <div class="card-body">
+            <p><strong>Question:</strong> {{ activity.content.question }}</p>
+            
+            {% if activity.type == 'poll' %}
+            <p><strong>Options:</strong></p>
+            <ul>
+                {% for option in activity.content.options %}
+                <li>{{ option }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            
+            {% if activity.ai_generated %}
+            <p style="color: #f59e0b; font-size: 0.875rem;">
+                🤖 This activity was generated with AI assistance
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="grid grid-3 mb-4">
+        <div class="stat-card">
+            <div class="stat-value">{{ response_count }}</div>
+            <div class="stat-label">Total Responses</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+            <div class="stat-value">
+                {{ ((response_count / (course.students|length)) * 100)|round|int if course.students else 0 }}%
+            </div>
+            <div class="stat-label">Participation Rate</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+            <div class="stat-value">{{ activity.created_at.strftime('%b %d') }}</div>
+            <div class="stat-label">Created</div>
+        </div>
+    </div>
+    
+    <!-- Responses -->
+    <div class="card">
+        <div class="card-header flex-between">
+            <h2>Responses</h2>
+            {% if activity.type == 'short_answer' and response_count > 0 %}
+            <button onclick="groupAnswers()" class="btn btn-success" id="groupBtn">
+                🤖 Group Answers with AI
+            </button>
+            {% endif %}
+        </div>
+        
+        <div class="card-body">
+            {% if response_count > 0 %}
+                
+                <!-- Poll Results -->
+                {% if activity.type == 'poll' %}
+                <div id="pollResults">
+                    {% for option in activity.content.options %}
+                    {% set option_count = activity.responses|selectattr('selected_options', 'containing', option)|list|length %}
+                    <div style="margin-bottom: 1.5rem;">
+                        <div class="flex-between mb-1">
+                            <span>{{ option }}</span>
+                            <span><strong>{{ option_count }}</strong> votes</span>
+                        </div>
+                        <div style="background-color: #e5e7eb; height: 20px; border-radius: 10px; overflow: hidden;">
+                            <div style="background-color: var(--primary-color); height: 100%; 
+                                        width: {{ (option_count / response_count * 100)|round }}%;
+                                        transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <!-- Short Answer Responses -->
+                {% if activity.type == 'short_answer' %}
+                <div id="answersList">
+                    {% if grouped_answers %}
+                    <div class="alert alert-info mb-4">
+                        <strong>AI Analysis:</strong> {{ grouped_answers.overall_analysis }}
+                    </div>
+                    
+                    {% for group in grouped_answers.groups %}
+                    <div class="card mb-3" style="border-left: 4px solid var(--primary-color);">
+                        <h3>Group {{ group.group_id }}: {{ group.theme }}</h3>
+                        <p style="color: #6b7280;">
+                            Understanding Level: <strong>{{ group.understanding_level|upper }}</strong>
+                        </p>
+                        
+                        {% if group.key_points %}
+                        <p><strong>Key Points:</strong></p>
+                        <ul>
+                            {% for point in group.key_points %}
+                            <li>{{ point }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                        
+                        <p><strong>Student Responses:</strong></p>
+                        {% for answer in group.answers %}
+                        <div class="card" style="background-color: #f9fafb; margin-bottom: 0.5rem;">
+                            <p style="margin: 0;"><strong>{{ answer.student_id }}:</strong> {{ answer.text }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                    
+                    {% if grouped_answers.common_misconceptions %}
+                    <div class="alert alert-warning">
+                        <strong>Common Misconceptions:</strong>
+                        <ul>
+                            {% for misconception in grouped_answers.common_misconceptions %}
+                            <li>{{ misconception }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    {% else %}
+                    <!-- Ungrouped answers -->
+                    {% for response in activity.responses %}
+                    <div class="card mb-2">
+                        <p><strong>{{ response.student_id or 'Anonymous' }}:</strong></p>
+                        <p>{{ response.text }}</p>
+                        <p style="font-size: 0.875rem; color: #6b7280;">
+                            Submitted: {{ response.submitted_at.strftime('%Y-%m-%d %H:%M') }}
+                        </p>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Word Cloud Responses -->
+                {% if activity.type == 'word_cloud' %}
+                <div id="wordCloudResults">
+                    {% set all_keywords = [] %}
+                    {% for response in activity.responses %}
+                        {% for keyword in response.keywords %}
+                            {% if all_keywords.append(keyword.lower()) %}{% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    
+                    <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; padding: 2rem;">
+                        {% for keyword in all_keywords|unique %}
+                        {% set count = all_keywords|select('equalto', keyword)|list|length %}
+                        <span style="font-size: {{ 1 + (count * 0.3) }}rem; 
+                                     color: hsl({{ loop.index * 30 }}, 70%, 50%);
+                                     font-weight: {{ 400 + (count * 100) }};">
+                            {{ keyword }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    
+                    <h3 class="mt-4">Individual Responses:</h3>
+                    {% for response in activity.responses %}
+                    <div class="card mb-2">
+                        <p><strong>{{ response.student_id or 'Anonymous' }}:</strong></p>
+                        <p>{{ response.keywords|join(', ') }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+            {% else %}
+            <div style="text-align: center; padding: 3rem; color: #6b7280;">
+                <p style="font-size: 1.25rem;">No responses yet</p>
+                <p>Share the activity link with students to collect responses</p>
+                <button onclick="copyActivityLink('{{ activity.link }}')" class="btn btn-primary mt-3">
+                    📋 Copy Student Link
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function groupAnswers() {
+    const btn = document.getElementById('groupBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Analyzing with AI...';
+    
+    try {
+        const result = await apiCall(
+            '{{ url_for("activity.group_answers", activity_id=activity._id) }}',
+            'POST'
+        );
+        
+        if (result.success) {
+            showAlert('Answers grouped successfully! Reloading...', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showAlert(result.message, 'danger');
+            btn.disabled = false;
+            btn.textContent = '🤖 Group Answers with AI';
+        }
+    } catch (error) {
+        showAlert('Failed to group answers', 'danger');
+        btn.disabled = false;
+        btn.textContent = '🤖 Group Answers with AI';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}Create Activity - Learning Activity System{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 2rem; max-width: 800px;">
+    <div class="card">
+        <div class="card-header">
+            <h1>Create Learning Activity</h1>
+        </div>
+        
+        <div class="card-body">
+            <!-- Activity Type Selection -->
+            <div class="form-group">
+                <label class="form-label">Creation Method *</label>
+                <div class="grid grid-2 gap-2">
+                    <button type="button" class="btn btn-outline" id="manualBtn" 
+                            onclick="selectMethod('manual')" style="padding: 1.5rem;">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">✍️</div>
+                        <strong>Manual Creation</strong>
+                        <p style="font-size: 0.875rem; margin-top: 0.5rem;">
+                            Create activity from scratch
+                        </p>
+                    </button>
+                    <button type="button" class="btn btn-outline" id="aiBtn" 
+                            onclick="selectMethod('ai')" style="padding: 1.5rem;">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🤖</div>
+                        <strong>AI-Assisted</strong>
+                        <p style="font-size: 0.875rem; margin-top: 0.5rem;">
+                            Generate with GPT-4
+                        </p>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Manual Creation Form -->
+            <div id="manualForm" style="display: none;">
+                <form id="createActivityForm">
+                    <div class="form-group">
+                        <label class="form-label">Course *</label>
+                        <select name="course_id" class="form-control" required>
+                            <option value="">Select a course</option>
+                            {% for course in courses %}
+                            <option value="{{ course._id }}">{{ course.name }} ({{ course.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Activity Type *</label>
+                        <select name="type" id="activityType" class="form-control" 
+                                onchange="updateActivityFields()" required>
+                            <option value="">Select type</option>
+                            <option value="poll">📊 Poll</option>
+                            <option value="short_answer">✍️ Short Answer</option>
+                            <option value="word_cloud">☁️ Word Cloud</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Activity Title *</label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    
+                    <!-- Poll Fields -->
+                    <div id="pollFields" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label">Question *</label>
+                            <textarea name="question" class="form-control" rows="3"></textarea>
+                        </div>
+                        
+                        <div id="poll-options">
+                            <div class="form-group">
+                                <label class="form-label">Option 1 *</label>
+                                <input type="text" class="form-control poll-option" name="options[]" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Option 2 *</label>
+                                <input type="text" class="form-control poll-option" name="options[]" required>
+                            </div>
+                        </div>
+                        
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addPollOption()">
+                            ➕ Add Option
+                        </button>
+                        
+                        <div class="form-group mt-3">
+                            <label>
+                                <input type="checkbox" name="allow_multiple">
+                                Allow multiple selections
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Short Answer Fields -->
+                    <div id="shortAnswerFields" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label">Question *</label>
+                            <textarea name="question" class="form-control" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Word Limit</label>
+                            <input type="number" name="word_limit" class="form-control" value="200">
+                        </div>
+                    </div>
+                    
+                    <!-- Word Cloud Fields -->
+                    <div id="wordCloudFields" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label">Question *</label>
+                            <textarea name="question" class="form-control" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Instructions</label>
+                            <textarea name="instructions" class="form-control" rows="2"
+                                      placeholder="e.g., Enter keywords related to the topic"></textarea>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        Create Activity
+                    </button>
+                </form>
+            </div>
+            
+            <!-- AI Generation Form -->
+            <div id="aiForm" style="display: none;">
+                <form id="aiGenerateForm">
+                    <div class="form-group">
+                        <label class="form-label">Course *</label>
+                        <select name="course_id" class="form-control" required>
+                            <option value="">Select a course</option>
+                            {% for course in courses %}
+                            <option value="{{ course._id }}">{{ course.name }} ({{ course.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Activity Type *</label>
+                        <select name="type" class="form-control" required>
+                            <option value="short_answer">✍️ Short Answer</option>
+                            <option value="poll">📊 Poll</option>
+                            <option value="word_cloud">☁️ Word Cloud</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Teaching Content / Keywords *</label>
+                        <textarea name="teaching_content" class="form-control" rows="5" required
+                                  placeholder="e.g., TCP/IP protocol, computer networks, three-way handshake"></textarea>
+                        <small style="color: #6b7280;">
+                            Describe the topic or enter resource keywords. AI will generate activity suggestions.
+                        </small>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success" style="width: 100%;">
+                        🤖 Generate with AI
+                    </button>
+                </form>
+                
+                <!-- AI Generated Preview -->
+                <div id="aiPreview" style="display: none; margin-top: 2rem;">
+                    <h3>AI Generated Activity</h3>
+                    <div id="aiContent" class="card" style="background-color: #f9fafb;"></div>
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="confirmAIActivity()" class="btn btn-primary">
+                            ✅ Use This Activity
+                        </button>
+                        <button onclick="document.getElementById('aiPreview').style.display='none'" 
+                                class="btn btn-secondary">
+                            🔄 Generate Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentMethod = null;
+let aiGeneratedData = null;
+
+function selectMethod(method) {
+    currentMethod = method;
+    
+    // Update button styles
+    document.getElementById('manualBtn').classList.remove('btn-primary');
+    document.getElementById('manualBtn').classList.add('btn-outline');
+    document.getElementById('aiBtn').classList.remove('btn-primary');
+    document.getElementById('aiBtn').classList.add('btn-outline');
+    
+    if (method === 'manual') {
+        document.getElementById('manualBtn').classList.remove('btn-outline');
+        document.getElementById('manualBtn').classList.add('btn-primary');
+        document.getElementById('manualForm').style.display = 'block';
+        document.getElementById('aiForm').style.display = 'none';
+    } else {
+        document.getElementById('aiBtn').classList.remove('btn-outline');
+        document.getElementById('aiBtn').classList.add('btn-primary');
+        document.getElementById('manualForm').style.display = 'none';
+        document.getElementById('aiForm').style.display = 'block';
+    }
+}
+
+function updateActivityFields() {
+    const type = document.getElementById('activityType').value;
+    
+    document.getElementById('pollFields').style.display = type === 'poll' ? 'block' : 'none';
+    document.getElementById('shortAnswerFields').style.display = type === 'short_answer' ? 'block' : 'none';
+    document.getElementById('wordCloudFields').style.display = type === 'word_cloud' ? 'block' : 'none';
+}
+
+// Manual creation form
+document.getElementById('createActivityForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = {};
+    
+    // Convert form data to object
+    for (let [key, value] of formData.entries()) {
+        if (key === 'options[]') {
+            if (!data.options) data.options = [];
+            if (value.trim()) data.options.push(value.trim());
+        } else if (key === 'allow_multiple') {
+            data.allow_multiple = true;
+        } else {
+            data[key] = value;
+        }
+    }
+    
+    showLoading();
+    
+    try {
+        const result = await apiCall('{{ url_for("activity.create_activity") }}', 'POST', data);
+        hideLoading();
+        
+        if (result.success) {
+            showAlert('Activity created successfully!', 'success');
+            setTimeout(() => {
+                window.location.href = '{{ url_for("course.dashboard") }}';
+            }, 1000);
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to create activity', 'danger');
+    }
+});
+
+// AI generation form
+document.getElementById('aiGenerateForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    showLoading();
+    
+    try {
+        const result = await apiCall('{{ url_for("activity.ai_generate_activity") }}', 'POST', data);
+        hideLoading();
+        
+        if (result.success) {
+            aiGeneratedData = result.generated_content;
+            aiGeneratedData.course_id = data.course_id;
+            displayAIPreview(result.generated_content);
+            document.getElementById('aiPreview').style.display = 'block';
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to generate activity', 'danger');
+    }
+});
+
+function displayAIPreview(content) {
+    const preview = document.getElementById('aiContent');
+    let html = `<h4>${content.title || 'Generated Activity'}</h4>`;
+    
+    if (content.questions) {
+        content.questions.forEach((q, i) => {
+            html += `<div style="margin-bottom: 1rem;">
+                <p><strong>Question ${i + 1}:</strong> ${q.question}</p>
+                <p style="font-size: 0.875rem; color: #6b7280;">
+                    Word limit: ${q.word_limit} | Key points: ${q.key_points.join(', ')}
+                </p>
+            </div>`;
+        });
+    } else if (content.question) {
+        html += `<p><strong>Question:</strong> ${content.question}</p>`;
+        if (content.options) {
+            html += `<p><strong>Options:</strong></p><ul>`;
+            content.options.forEach(opt => html += `<li>${opt}</li>`);
+            html += `</ul>`;
+        }
+    }
+    
+    preview.innerHTML = html;
+}
+
+async function confirmAIActivity() {
+    if (!aiGeneratedData) return;
+    
+    const data = {
+        course_id: aiGeneratedData.course_id,
+        type: aiGeneratedData.activity_type,
+        title: aiGeneratedData.title || aiGeneratedData.questions[0].question.substring(0, 50),
+        question: aiGeneratedData.question || aiGeneratedData.questions[0].question,
+        options: aiGeneratedData.options,
+        word_limit: aiGeneratedData.questions ? aiGeneratedData.questions[0].word_limit : 200,
+        instructions: aiGeneratedData.instructions
+    };
+    
+    showLoading();
+    
+    try {
+        const result = await apiCall('{{ url_for("activity.create_activity") }}', 'POST', data);
+        hideLoading();
+        
+        if (result.success) {
+            showAlert('Activity created successfully!', 'success');
+            setTimeout(() => {
+                window.location.href = '{{ url_for("course.dashboard") }}';
+            }, 1000);
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to create activity', 'danger');
+    }
+}
+</script>
+{% endblock %}

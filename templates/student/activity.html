@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}{{ activity.title }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <div class="page-header">
+        <h1>{{ activity.title }}</h1>
+        <p>{{ course.name }} - {{ course.code }}</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="alert alert-info mb-4">
+                <p style="margin: 0;"><strong>Question:</strong> {{ activity.content.question }}</p>
+            </div>
+
+            {% if has_responded %}
+            <!-- Show student's response -->
+            <div class="alert alert-success">
+                <h3>✅ You have already responded to this activity</h3>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Your Response</h3>
+                </div>
+                <div class="card-body">
+                    {% if activity.type == 'poll' %}
+                        <p><strong>Selected:</strong> {{ student_response.selected_options|join(', ') }}</p>
+                    {% elif activity.type == 'short_answer' %}
+                        <p><strong>Your Answer:</strong></p>
+                        <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem;">
+                            {{ student_response.text }}
+                        </div>
+                    {% elif activity.type == 'word_cloud' %}
+                        <p><strong>Your Keywords:</strong></p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            {% for keyword in student_response.keywords %}
+                            <span class="activity-type activity-word-cloud">{{ keyword }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <p style="margin-top: 1rem; color: #6b7280;">
+                        <small>Submitted at: {{ student_response.timestamp }}</small>
+                    </p>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- Show response form -->
+            <form id="responseForm">
+                {% if activity.type == 'poll' %}
+                <div class="form-group">
+                    <label class="form-label">Select your answer: *</label>
+                    {% for option in activity.content.options %}
+                    <div style="margin-bottom: 0.75rem;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="{{ 'checkbox' if activity.content.allow_multiple else 'radio' }}" 
+                                   name="selected_options" value="{{ option }}" 
+                                   style="margin-right: 0.5rem;"
+                                   {% if not activity.content.allow_multiple %}required{% endif %}>
+                            <span>{{ option }}</span>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if activity.type == 'short_answer' %}
+                <div class="form-group">
+                    <label class="form-label">Your Answer: *</label>
+                    <textarea name="text" id="answerText" class="form-control" rows="8" required
+                              placeholder="Enter your answer here..."></textarea>
+                    <div id="charCount" style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                        0 / {{ activity.content.word_limit }} words suggested
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if activity.type == 'word_cloud' %}
+                <div class="form-group">
+                    <label class="form-label">Enter Keywords: *</label>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">
+                        {{ activity.content.instructions }}
+                    </p>
+                    <input type="text" id="keywordInput" class="form-control" 
+                           placeholder="Type a keyword and press Enter">
+                    <div id="keywordTags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
+                    </div>
+                    <input type="hidden" name="keywords" id="keywordsData">
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 2rem;">
+                    Submit Response
+                </button>
+            </form>
+
+            <div id="successMessage" style="display: none; text-align: center; padding: 3rem;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+                <h2>Thank you for your response!</h2>
+                <p style="color: #6b7280;">Your answer has been submitted successfully.</p>
+                <a href="{{ url_for('student.course_detail', course_id=course._id) }}" 
+                   class="btn btn-primary" style="margin-top: 1rem;">Back to Course</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <a href="{{ url_for('student.course_detail', course_id=course._id) }}" 
+           class="btn">← Back to Course</a>
+    </div>
+</div>
+
+{% if not has_responded %}
+<script>
+{% if activity.type == 'word_cloud' %}
+// Word cloud keyword management
+let keywords = [];
+
+document.getElementById('keywordInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const input = e.target;
+        const keyword = input.value.trim();
+        
+        if (keyword && !keywords.includes(keyword.toLowerCase())) {
+            keywords.push(keyword.toLowerCase());
+            addKeywordTag(keyword);
+            input.value = '';
+            updateKeywordsData();
+        }
+    }
+});
+
+function addKeywordTag(keyword) {
+    const container = document.getElementById('keywordTags');
+    const tag = document.createElement('div');
+    tag.className = 'activity-type activity-word-cloud';
+    tag.innerHTML = `
+        ${keyword}
+        <button type="button" onclick="removeKeyword('${keyword}')" 
+                style="margin-left: 0.5rem; background: none; border: none; cursor: pointer;">
+            ×
+        </button>
+    `;
+    container.appendChild(tag);
+}
+
+function removeKeyword(keyword) {
+    keywords = keywords.filter(k => k !== keyword.toLowerCase());
+    updateKeywordsData();
+    
+    const container = document.getElementById('keywordTags');
+    container.innerHTML = '';
+    keywords.forEach(k => addKeywordTag(k));
+}
+
+function updateKeywordsData() {
+    document.getElementById('keywordsData').value = JSON.stringify(keywords);
+}
+{% endif %}
+
+// Form submission
+document.getElementById('responseForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = {
+        student_id: '{{ user.student_id }}',
+        student_name: '{{ user.username }}'
+    };
+    
+    // Convert form data
+    for (let [key, value] of formData.entries()) {
+        if (key === 'selected_options') {
+            if (!data.selected_options) data.selected_options = [];
+            data.selected_options.push(value);
+        } else if (key === 'keywords') {
+            data.keywords = JSON.parse(value || '[]');
+        } else {
+            data[key] = value;
+        }
+    }
+    
+    {% if activity.type == 'word_cloud' %}
+    if (!data.keywords || data.keywords.length === 0) {
+        showAlert('Please enter at least one keyword', 'danger');
+        return;
+    }
+    {% endif %}
+    
+    showLoading();
+    
+    try {
+        const result = await apiCall(
+            '{{ url_for("activity.submit_response", activity_id=activity._id) }}',
+            'POST',
+            data
+        );
+        
+        hideLoading();
+        
+        if (result.success) {
+            document.getElementById('responseForm').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'block';
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to submit response. Please try again.', 'danger');
+    }
+});
+
+{% if activity.type == 'short_answer' %}
+// Word counter for short answer
+document.getElementById('answerText').addEventListener('input', (e) => {
+    const text = e.target.value;
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+    const wordCount = words.length;
+    document.getElementById('charCount').textContent = 
+        `${wordCount} / {{ activity.content.word_limit }} words suggested`;
+});
+{% endif %}
+</script>
+{% endif %}
+{% endblock %}

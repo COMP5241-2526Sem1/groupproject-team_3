@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Create Course - Learning Activity System{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 600px; margin-top: 4rem;">
+    <div class="card">
+        <div class="card-header">
+            <h1>Create New Course</h1>
+            <p style="color: #6b7280; margin: 0.5rem 0;">
+                Set up a new course for your students
+            </p>
+        </div>
+        
+        <div class="card-body">
+            <form id="createCourseForm">
+                <div class="form-group">
+                    <label for="name" class="form-label">Course Name *</label>
+                    <input type="text" id="name" name="name" class="form-control" required
+                           placeholder="e.g., Introduction to Computer Science">
+                </div>
+                
+                <div class="form-group">
+                    <label for="code" class="form-label">Course Code *</label>
+                    <input type="text" id="code" name="code" class="form-control" required
+                           placeholder="e.g., CS101">
+                    <small style="color: #6b7280;">Must be unique</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea id="description" name="description" class="form-control" rows="4"
+                              placeholder="Enter course description..."></textarea>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">
+                        Create Course
+                    </button>
+                    <a href="{{ url_for('course.dashboard') }}" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('createCourseForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    showLoading();
+    
+    try {
+        const response = await fetch('{{ url_for("course.create_course") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        hideLoading();
+        
+        if (result.success) {
+            showAlert('Course created successfully!', 'success');
+            setTimeout(() => {
+                window.location.href = '{{ url_for("course.dashboard") }}';
+            }, 1000);
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to create course. Please try again.', 'danger');
+    }
+});
+</script>
+{% endblock %}

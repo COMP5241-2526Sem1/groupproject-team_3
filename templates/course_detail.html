@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.name }} - Course Details{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 2rem;">
+    <!-- Course Header -->
+    <div class="card mb-4">
+        <div class="card-header flex-between">
+            <div>
+                <h1>{{ course.name }}</h1>
+                <p style="color: #6b7280; margin: 0.5rem 0;">
+                    Course Code: <strong>{{ course.code }}</strong>
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="openModal('importStudentsModal')" class="btn btn-primary">
+                    👥 Import Students
+                </button>
+                <a href="{{ url_for('activity.create_activity') }}?course_id={{ course._id }}" 
+                   class="btn btn-success">
+                    📝 Create Activity
+                </a>
+            </div>
+        </div>
+        
+        {% if course.description %}
+        <div class="card-body">
+            <p>{{ course.description }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Students Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Students ({{ students|length }})</h2>
+        </div>
+        <div class="card-body">
+            {% if students %}
+            <table class="table" id="studentsTable">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ student.student_id }}</td>
+                        <td>{{ student.name }}</td>
+                        <td>{{ student.email or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="text-align: center; color: #6b7280; padding: 2rem;">
+                No students enrolled yet. Click "Import Students" to add students.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Activities Section -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Learning Activities ({{ activities|length }})</h2>
+        </div>
+        <div class="card-body">
+            {% if activities %}
+            <div class="grid grid-2">
+                {% for activity in activities %}
+                <div class="card" style="border-left: 4px solid 
+                    {% if activity.type == 'poll' %}#2563eb
+                    {% elif activity.type == 'short_answer' %}#10b981
+                    {% else %}#f59e0b{% endif %};">
+                    
+                    <div class="flex-between mb-2">
+                        <h3>{{ activity.title }}</h3>
+                        <span class="activity-type activity-{{ activity.type.replace('_', '-') }}">
+                            {% if activity.type == 'poll' %}📊 Poll
+                            {% elif activity.type == 'short_answer' %}✍️ Short Answer
+                            {% else %}☁️ Word Cloud{% endif %}
+                        </span>
+                    </div>
+                    
+                    <p style="color: #6b7280; margin: 0.5rem 0;">
+                        Responses: <strong>{{ activity.response_count }}</strong>
+                    </p>
+                    
+                    {% if activity.ai_generated %}
+                    <p style="color: #f59e0b; font-size: 0.875rem; margin: 0.5rem 0;">
+                        🤖 AI Generated
+                    </p>
+                    {% endif %}
+                    
+                    <div class="flex gap-2 mt-3">
+                        <a href="{{ url_for('activity.activity_detail', activity_id=activity._id) }}" 
+                           class="btn btn-primary btn-sm">
+                            View Details
+                        </a>
+                        <button onclick="copyActivityLink('{{ activity.link }}')" 
+                                class="btn btn-secondary btn-sm">
+                            📋 Copy Link
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 3rem; color: #6b7280;">
+                <p style="font-size: 1.25rem; margin-bottom: 1rem;">📝 No activities yet</p>
+                <p>Create your first activity for this course!</p>
+                <a href="{{ url_for('activity.create_activity') }}?course_id={{ course._id }}" 
+                   class="btn btn-success mt-3">
+                    Create Activity
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Import Students Modal -->
+<div id="importStudentsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Import Students</h2>
+            <button class="modal-close" onclick="closeModal('importStudentsModal')">×</button>
+        </div>
+        
+        <div style="margin-bottom: 2rem;">
+            <h3>Option 1: Manual Input</h3>
+            <form id="manualStudentForm">
+                <div class="form-group">
+                    <label class="form-label">Student ID *</label>
+                    <input type="text" name="student_id" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Name *</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-primary">Add Student</button>
+            </form>
+        </div>
+        
+        <div>
+            <h3>Option 2: Upload CSV</h3>
+            <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 1rem;">
+                CSV format: student_id,name,email (header row required)
+            </p>
+            <form id="csvUploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <input type="file" name="file" accept=".csv" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Upload CSV</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Manual student form
+document.getElementById('manualStudentForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    showLoading();
+    
+    try {
+        const result = await apiCall(
+            '{{ url_for("course.import_students", course_id=course._id) }}',
+            'POST',
+            data
+        );
+        
+        hideLoading();
+        
+        if (result.success) {
+            showAlert(result.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to add student', 'danger');
+    }
+});
+
+// CSV upload form
+document.getElementById('csvUploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    
+    showLoading();
+    
+    try {
+        const response = await fetch('{{ url_for("course.import_students", course_id=course._id) }}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        hideLoading();
+        
+        if (result.success) {
+            showAlert(result.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to upload CSV', 'danger');
+    }
+});
+</script>
+{% endblock %}

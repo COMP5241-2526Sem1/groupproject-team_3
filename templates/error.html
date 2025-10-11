@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Error {{ error_code }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 600px; margin-top: 4rem;">
+    <div class="card text-center">
+        <div style="font-size: 5rem; margin-bottom: 1rem;">
+            {% if error_code == 404 %}🔍
+            {% elif error_code == 403 %}🚫
+            {% elif error_code == 500 %}⚠️
+            {% else %}❌{% endif %}
+        </div>
+        
+        <h1>Error {{ error_code }}</h1>
+        <p style="font-size: 1.25rem; color: #6b7280; margin: 1.5rem 0;">
+            {{ error_message }}
+        </p>
+        
+        <div class="flex gap-2 flex-center mt-4">
+            <a href="javascript:history.back()" class="btn btn-secondary">
+                ← Go Back
+            </a>
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                🏠 Go Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

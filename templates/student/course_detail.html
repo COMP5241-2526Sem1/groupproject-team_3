@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.name }} - Course Detail{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>{{ course.name }}</h1>
+        <p>{{ course.code }}</p>
+    </div>
+
+    <!-- Course Info -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3>Course Description</h3>
+            <p>{{ course.description }}</p>
+            <p><strong>Teacher:</strong> {{ teacher.username if teacher else 'N/A' }}</p>
+            <p><strong>Institution:</strong> {{ course.institution if course.institution else teacher.institution if teacher else 'N/A' }}</p>
+        </div>
+    </div>
+
+    <!-- Activities -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Course Activities</h2>
+        </div>
+        <div class="card-body">
+            {% if activities %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Activity</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in activities %}
+                    <tr>
+                        <td>
+                            <strong>{{ activity.title }}</strong>
+                            <br>
+                            <small>{{ activity.content.question[:80] }}...</small>
+                        </td>
+                        <td>
+                            <span class="activity-type activity-{{ activity.type }}">
+                                {% if activity.type == 'poll' %}📊 Poll
+                                {% elif activity.type == 'short_answer' %}✍️ Short Answer
+                                {% elif activity.type == 'word_cloud' %}☁️ Word Cloud
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if activity.has_responded %}
+                            <span class="badge badge-success">✅ Completed</span>
+                            {% else %}
+                            <span class="badge badge-warning">⏳ Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if activity.has_responded %}
+                            <a href="{{ url_for('student.view_activity', activity_id=activity._id) }}" 
+                               class="btn btn-sm">View Response</a>
+                            {% else %}
+                            <a href="{{ url_for('student.view_activity', activity_id=activity._id) }}" 
+                               class="btn btn-primary btn-sm">Participate</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="alert alert-info">
+                <p>No activities available for this course yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <a href="{{ url_for('student.dashboard') }}" class="btn">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
