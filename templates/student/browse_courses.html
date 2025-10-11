@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Courses - Student{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>🔍 Browse Courses</h1>
+        <p class="text-muted">Explore and enroll in available courses</p>
+    </div>
+
+    {% if courses %}
+    <div class="grid grid-3">
+        {% for course in courses %}
+        <div class="card browse-course-card">
+            <div class="card-body">
+                <div class="course-badge">
+                    <span class="badge badge-primary">{{ course.code }}</span>
+                </div>
+                
+                <h3>{{ course.name }}</h3>
+                
+                <p class="course-description">
+                    {{ course.description or 'No description available' }}
+                </p>
+                
+                <div class="course-info">
+                    <div class="info-item">
+                        <span class="info-icon">👨‍🏫</span>
+                        <span>{{ course.teacher_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-icon">📝</span>
+                        <span>{{ course.activity_count }} Activities</span>
+                    </div>
+                </div>
+                
+                <button onclick="enrollCourse('{{ course._id }}')" 
+                        class="btn btn-success btn-block">
+                    ✓ Enroll Now
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center empty-state">
+            <div class="empty-icon">✅</div>
+            <h2>All Courses Enrolled!</h2>
+            <p>You're enrolled in all available courses.</p>
+            <a href="{{ url_for('student.my_courses') }}" class="btn btn-primary">
+                View My Courses
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.browse-course-card {
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s;
+    position: relative;
+}
+.browse-course-card:hover {
+    border-color: #4CAF50;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+    transform: translateY(-4px);
+}
+.course-badge {
+    margin-bottom: 1rem;
+}
+.badge-primary {
+    background-color: #3b82f6;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.course-description {
+    color: #6b7280;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin: 1rem 0;
+    min-height: 60px;
+}
+.course-info {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-radius: 8px;
+}
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #374151;
+}
+.info-item:last-child {
+    margin-bottom: 0;
+}
+.info-icon {
+    font-size: 1.2rem;
+}
+.btn-block {
+    width: 100%;
+}
+.empty-state {
+    padding: 3rem 2rem;
+}
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+</style>
+
+<script>
+async function enrollCourse(courseId) {
+    if (!confirm('Do you want to enroll in this course?')) return;
+    
+    showLoading();
+    try {
+        const response = await fetch(`/student/enroll/${courseId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        hideLoading();
+        
+        if (data.success) {
+            showSuccess('Successfully enrolled in course!');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showError(data.message || 'Failed to enroll');
+        }
+    } catch (error) {
+        hideLoading();
+        showError('An error occurred');
+    }
+}
+</script>
+{% endblock %}

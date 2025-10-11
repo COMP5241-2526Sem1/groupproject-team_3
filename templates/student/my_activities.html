@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}My Activities - Student{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>✏️ My Activities</h1>
+        <p class="text-muted">View all learning activities from your enrolled courses</p>
+    </div>
+
+    {% if activities %}
+    <div class="card">
+        <div class="card-body">
+            <table class="activities-table">
+                <thead>
+                    <tr>
+                        <th>Activity</th>
+                        <th>Course</th>
+                        <th>Type</th>
+                        <th>Responses</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in activities %}
+                    <tr class="activity-row {% if activity.completed %}completed{% endif %}">
+                        <td>
+                            <strong>{{ activity.title }}</strong>
+                        </td>
+                        <td>
+                            <span class="course-badge">{{ activity.course_code }}</span>
+                            <div class="course-name">{{ activity.course_name }}</div>
+                        </td>
+                        <td>
+                            {% if activity.type == 'poll' %}
+                                <span class="type-badge type-poll">📊 Poll</span>
+                            {% elif activity.type == 'short_answer' %}
+                                <span class="type-badge type-short">✍️ Short Answer</span>
+                            {% elif activity.type == 'word_cloud' %}
+                                <span class="type-badge type-cloud">☁️ Word Cloud</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="response-count">{{ activity.response_count }}</span>
+                        </td>
+                        <td>
+                            {% if activity.completed %}
+                                <span class="status-badge status-complete">✅ Completed</span>
+                            {% else %}
+                                <span class="status-badge status-pending">⏳ Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if activity.completed %}
+                                <a href="{{ url_for('student.view_activity', activity_id=activity._id) }}" 
+                                   class="btn btn-sm btn-outline">
+                                    View
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('student.view_activity', activity_id=activity._id) }}" 
+                                   class="btn btn-sm btn-primary">
+                                    Participate →
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Statistics Summary -->
+    <div class="grid grid-3 mt-4">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <div class="stat-number">{{ activities|length }}</div>
+                <div class="stat-label">Total Activities</div>
+            </div>
+        </div>
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <div class="stat-number">{{ activities|selectattr('completed')|list|length }}</div>
+                <div class="stat-label">Completed</div>
+            </div>
+        </div>
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <div class="stat-number">{{ activities|rejectattr('completed')|list|length }}</div>
+                <div class="stat-label">Pending</div>
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center empty-state">
+            <div class="empty-icon">✏️</div>
+            <h2>No Activities Available</h2>
+            <p>Your enrolled courses don't have any activities yet, or you haven't enrolled in any courses.</p>
+            <a href="{{ url_for('student.browse_courses') }}" class="btn btn-primary">
+                Browse Courses
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.activities-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.activities-table th,
+.activities-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+.activities-table th {
+    background-color: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+}
+.activity-row {
+    transition: background-color 0.2s;
+}
+.activity-row:hover {
+    background-color: #f9fafb;
+}
+.activity-row.completed {
+    opacity: 0.8;
+}
+.course-badge {
+    display: inline-block;
+    background-color: #3b82f6;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.course-name {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+.type-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.type-poll {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+.type-short {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+.type-cloud {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+.response-count {
+    display: inline-block;
+    background-color: #f3f4f6;
+    color: #374151;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+}
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.status-complete {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+.status-pending {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+.stat-card {
+    border-left: 4px solid #4CAF50;
+}
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #4CAF50;
+    margin-bottom: 0.5rem;
+}
+.stat-label {
+    color: #6b7280;
+    font-weight: 600;
+}
+.empty-state {
+    padding: 3rem 2rem;
+}
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+.mt-4 {
+    margin-top: 2rem;
+}
+.text-center {
+    text-align: center;
+}
+</style>
+{% endblock %}

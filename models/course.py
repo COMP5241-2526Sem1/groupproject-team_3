@@ -62,12 +62,18 @@ class Course:
         Find course by ID
         
         Args:
-            course_id (str): Course ID
+            course_id (str or ObjectId): Course ID
             
         Returns:
             dict: Course document or None
         """
-        return db_service.find_one(Course.COLLECTION_NAME, {'_id': ObjectId(course_id)})
+        # Convert to ObjectId if it's a string
+        if isinstance(course_id, str):
+            try:
+                course_id = ObjectId(course_id)
+            except:
+                return None
+        return db_service.find_one(Course.COLLECTION_NAME, {'_id': course_id})
     
     @staticmethod
     def find_by_teacher(teacher_id):
@@ -185,3 +191,17 @@ class Course:
             bool: True if successful
         """
         return Course.update_course(course_id, {'active': False})
+    
+    @staticmethod
+    def get_all():
+        """
+        Get all active courses
+        
+        Returns:
+            list: List of all active course documents
+        """
+        return db_service.find_many(
+            Course.COLLECTION_NAME,
+            {'active': True},
+            sort=[('created_at', -1)]
+        )

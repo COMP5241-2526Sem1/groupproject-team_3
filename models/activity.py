@@ -87,12 +87,18 @@ class Activity:
         Find activity by ID
         
         Args:
-            activity_id (str): Activity ID
+            activity_id (str or ObjectId): Activity ID
             
         Returns:
             dict: Activity document or None
         """
-        return db_service.find_one(Activity.COLLECTION_NAME, {'_id': ObjectId(activity_id)})
+        # Convert to ObjectId if it's a string
+        if isinstance(activity_id, str):
+            try:
+                activity_id = ObjectId(activity_id)
+            except:
+                return None
+        return db_service.find_one(Activity.COLLECTION_NAME, {'_id': activity_id})
     
     @staticmethod
     def find_by_link(link):
@@ -113,11 +119,14 @@ class Activity:
         Find all activities in a course
         
         Args:
-            course_id (str): Course ID
+            course_id (str or ObjectId): Course ID
             
         Returns:
             list: List of activity documents
         """
+        # Convert to string for comparison (activities store course_id as string)
+        if isinstance(course_id, ObjectId):
+            course_id = str(course_id)
         return db_service.find_many(
             Activity.COLLECTION_NAME,
             {'course_id': course_id, 'active': True},

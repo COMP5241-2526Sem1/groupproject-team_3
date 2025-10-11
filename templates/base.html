@@ -22,15 +22,30 @@
             
             <ul class="nav-menu">
                 {% if session.get('role') == 'admin' %}
-                <li><a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a></li>
-                {% else %}
-                <li><a href="{{ url_for('course.dashboard') }}">Dashboard</a></li>
-                <li><a href="{{ url_for('course.create_course') }}">New Course</a></li>
-                <li><a href="{{ url_for('activity.create_activity') }}">New Activity</a></li>
+                    <li><a href="{{ url_for('admin.admin_dashboard') }}">📊 Admin Dashboard</a></li>
+                
+                {% elif session.get('role') == 'student' %}
+                    <li><a href="{{ url_for('student.dashboard') }}">🏠 My Dashboard</a></li>
+                    <li><a href="{{ url_for('student.my_courses') }}">📚 My Courses</a></li>
+                    <li><a href="{{ url_for('student.browse_courses') }}">🔍 Browse Courses</a></li>
+                    <li><a href="{{ url_for('student.my_activities') }}">✏️ My Activities</a></li>
+                    <li><a href="{{ url_for('student.leaderboard') }}">🏆 Leaderboard</a></li>
+                
+                {% elif session.get('role') == 'teacher' %}
+                    <li><a href="{{ url_for('course.dashboard') }}">📊 Dashboard</a></li>
+                    <li><a href="{{ url_for('course.create_course') }}">➕ New Course</a></li>
+                    <li><a href="{{ url_for('activity.create_activity') }}">📝 New Activity</a></li>
                 {% endif %}
                 
                 <li class="nav-user">
                     <span>👤 {{ session.get('username') }}</span>
+                    {% if session.get('role') == 'student' %}
+                        <span class="badge">Student</span>
+                    {% elif session.get('role') == 'teacher' %}
+                        <span class="badge">Teacher</span>
+                    {% elif session.get('role') == 'admin' %}
+                        <span class="badge">Admin</span>
+                    {% endif %}
                     <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline">Logout</a>
                 </li>
             </ul>
