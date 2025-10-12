@@ -50,7 +50,8 @@ Complete guide to all documentation files in this project.
 
 | Document | Description | Issue Covered |
 |----------|-------------|---------------|
-| **[DASHBOARD_COURSE_DETAIL_FIX.md](DASHBOARD_COURSE_DETAIL_FIX.md)** | Dashboard & course detail error fixes<br>Dashboard 和课程详情错误修复 | Template syntax errors<br>Dictionary access issues |
+| **[DASHBOARD_COURSE_DETAIL_FIX.md](DASHBOARD_COURSE_DETAIL_FIX.md)** | Dashboard & course detail error fixes<br>Dashboard 和课程详情错误修复 | Template syntax errors<br>Dictionary access issues<br>Timestamp display ⭐ |
+| **[TIMESTAMP_FIX_GUIDE.md](TIMESTAMP_FIX_GUIDE.md)** ⭐ | Timestamp display fix guide (NEW)<br>时间戳显示修复指南（新增） | Field name inconsistency<br>Date formatting |
 | **[DASHBOARD_FIX_COMPLETE.md](DASHBOARD_FIX_COMPLETE.md)** | Dashboard fix completion report<br>Dashboard 修复完成报告 | ObjectId type handling |
 | **[DASHBOARD_FIX_README.md](DASHBOARD_FIX_README.md)** | Dashboard fix documentation<br>Dashboard 修复文档 | Template rewrite process |
 | **[FIX_STUDENT_ERROR.md](FIX_STUDENT_ERROR.md)** | Student interface error fixes<br>学生界面错误修复 | Interface separation issues |
@@ -96,8 +97,9 @@ Complete guide to all documentation files in this project.
 - STUDENT_TESTING_GUIDE.md
 - TESTING_COMPLETE_GUIDE.md
 
-### 🐛 Bug Fixes (4 files)
+### 🐛 Bug Fixes (5 files)
 - DASHBOARD_COURSE_DETAIL_FIX.md
+- TIMESTAMP_FIX_GUIDE.md ⭐ NEW
 - DASHBOARD_FIX_COMPLETE.md
 - FIX_STUDENT_ERROR.md
 - DASHBOARD_FIX_README.md
@@ -174,6 +176,7 @@ Complete guide to all documentation files in this project.
 | Problem | Document |
 |---------|----------|
 | **Dashboard shows ERROR**<br>Dashboard 显示错误 | [DASHBOARD_COURSE_DETAIL_FIX.md](DASHBOARD_COURSE_DETAIL_FIX.md) |
+| **Timestamp not showing**<br>时间戳不显示 ⭐ | [TIMESTAMP_FIX_GUIDE.md](TIMESTAMP_FIX_GUIDE.md) |
 | **MongoDB connection issues**<br>MongoDB 连接问题 | [MONGODB_SETUP_GUIDE.md](MONGODB_SETUP_GUIDE.md) |
 | **Virtual environment problems**<br>虚拟环境问题 | [VENV_GUIDE.md](VENV_GUIDE.md) |
 | **Student interface errors**<br>学生界面错误 | [FIX_STUDENT_ERROR.md](FIX_STUDENT_ERROR.md) |
@@ -186,12 +189,12 @@ Complete guide to all documentation files in this project.
 |----------|-------|-------------------|
 | Quickstart | 4 | ~1,500 |
 | User Guides | 3 | ~1,200 |
-| Bug Fixes | 4 | ~1,000 |
+| Bug Fixes | 5 | ~1,500 |
 | Design | 3 | ~800 |
 | Setup | 3 | ~600 |
 | Testing | 4 | ~1,000 |
 | Project Mgmt | 2 | ~400 |
-| **Total** | **23** | **~6,500** |
+| **Total** | **24** | **~7,000** |
 
 ---
 
@@ -199,11 +202,13 @@ Complete guide to all documentation files in this project.
 
 | Document | Date | Changes |
 |----------|------|---------|
+| **TIMESTAMP_FIX_GUIDE.md** | 2025-10-12 | ⭐ Created comprehensive timestamp fix guide |
+| **DASHBOARD_COURSE_DETAIL_FIX.md** | 2025-10-12 | Added timestamp issue (3rd problem) |
+| **TESTING_COMPLETE_GUIDE.md** | 2025-10-12 | Updated with timestamp testing steps |
 | **QUICK_START_GUIDE.md** | 2025-10-12 | Created complete bilingual guide |
 | **MONGODB_SETUP_GUIDE.md** | 2025-10-12 | Added MongoDB Atlas setup |
 | **QUICK_START_30SEC.md** | 2025-10-12 | Created quick reference |
-| **DASHBOARD_COURSE_DETAIL_FIX.md** | 2025-10-12 | Fixed template errors |
-| **DOC_INDEX.md** | 2025-10-12 | Created documentation index |
+| **DOC_INDEX.md** | 2025-10-12 | Updated with TIMESTAMP_FIX_GUIDE.md |
 
 ---
 

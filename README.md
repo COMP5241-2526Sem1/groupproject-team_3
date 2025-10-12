@@ -28,6 +28,7 @@ A comprehensive learning activity management platform for university lecturers i
 ### For Developers | 开发者文档
 - 🎨 **[Student Interface Design](STUDENT_INTERFACE_FINAL.md)** - UI/UX documentation
 - 🐛 **[Bug Fix Records](DASHBOARD_COURSE_DETAIL_FIX.md)** - Error fixes log
+- ⏰ **[Timestamp Fix Guide](TIMESTAMP_FIX_GUIDE.md)** - Timestamp display fix ⭐ NEW
 - 📋 **[System Enhancement Plan](SYSTEM_ENHANCEMENT_PLAN.md)** - Roadmap
 - 🔧 **[Project Delivery Guide](PROJECT_DELIVERY.md)** - Deployment guide
 
@@ -41,6 +42,7 @@ A comprehensive learning activity management platform for university lecturers i
 - ✅ **Browse Courses** - Discover and enroll in courses | 浏览和选课
 - ✅ **Course Details** - View activities and materials | 查看活动和资料
 - ✅ **Activities** - Participate in polls, quizzes, word clouds | 参与投票、测验、词云
+- ✅ **Submission Tracking** - View submission timestamps | 查看提交时间戳 ⭐
 - 🔄 **Leaderboard** - Gamification (coming soon) | 排行榜（即将推出）
 
 ### 👨‍🏫 Teacher Interface | 教师界面
@@ -325,6 +327,33 @@ groupproject-team_3/
 # Change port in .env or use different port
 APP_PORT=5001
 ```
+
+### Timestamp Not Showing ⭐ (Fixed in v1.1)
+**Issue**: Student submission timestamps showing blank  
+**Solution**: See [TIMESTAMP_FIX_GUIDE.md](TIMESTAMP_FIX_GUIDE.md)  
+**Status**: ✅ Fixed (2025-10-12)
+
+---
+
+## 🆕 Recent Updates | 最近更新
+
+### v1.1 (2025-10-12)
+- ✅ Fixed timestamp display issue in activity submissions
+- ✅ Added comprehensive documentation (TIMESTAMP_FIX_GUIDE.md)
+- ✅ Updated DASHBOARD_COURSE_DETAIL_FIX.md with timestamp fix
+- ✅ Updated TESTING_COMPLETE_GUIDE.md with timestamp testing
+- ✅ Unified field naming to `submitted_at` across all files
+- ✅ Added date formatting: `YYYY-MM-DD HH:MM:SS`
+
+### v1.0 (2025-10-12)
+- ✅ Complete student interface redesign
+- ✅ Fixed dashboard template syntax errors
+- ✅ Fixed course detail dictionary access issues
+- ✅ Added comprehensive bilingual documentation
+- ✅ Created MongoDB Atlas setup guide
+- ✅ Added 30-second quick start guide
+
+---
 
 ## Future Enhancements
 
