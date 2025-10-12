@@ -325,7 +325,7 @@ def my_responses():
                         'activity': activity,
                         'course': course,
                         'response': student_response,
-                        'submitted_at': student_response.get('timestamp')
+                        'submitted_at': student_response.get('submitted_at')
                     })
         
         # Sort by submission time
