@@ -42,7 +42,7 @@
                         </div>
                     {% endif %}
                     <p style="margin-top: 1rem; color: #6b7280;">
-                        <small>Submitted at: {{ student_response.timestamp }}</small>
+                        <small>Submitted at: {{ student_response.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if student_response.submitted_at else 'N/A' }}</small>
                     </p>
                 </div>
             </div>

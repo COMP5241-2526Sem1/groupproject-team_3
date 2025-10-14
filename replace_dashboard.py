@@ -1,4 +1,8 @@
-{% extends "base.html" %}
+"""
+Replace dashboard.html with new version
+"""
+
+new_content = """{% extends "base.html" %}
 
 {% block title %}Student Dashboard{% endblock %}
 
@@ -15,7 +19,7 @@
             <p class="text-muted">Student ID: {{ user.student_id }} | {{ user.email }}</p>
         </div>
         <div>
-            <button onclick="window.location.href='{{ url_for('student.browse_courses') }}'" class="btn btn-primary">
+            <button onclick="window.location.href='{{ url_for(\\'student.browse_courses\\') }}'" class="btn btn-primary">
                 🔍 Browse Courses
             </button>
         </div>
@@ -62,7 +66,7 @@
         <div class="dashboard-section">
             <div class="section-header">
                 <h2>📚 My Courses</h2>
-                <a href="{{ url_for('student.my_courses') }}" class="btn-link">View All →</a>
+                <a href="{{ url_for(\\'student.my_courses\\') }}" class="btn-link">View All →</a>
             </div>
 
             {% if enrolled_courses %}
@@ -77,13 +81,13 @@
                             <span class="badge badge-primary">{{ course.activity_count }} Activities</span>
                         </div>
                         <div class="course-progress">
-                            {% set progress = (course.get('completed_activities', 0) / course.activity_count * 100) if course.activity_count > 0 else 0 %}
+                            {% set progress = (course.get(\\'completed_activities\\', 0) / course.activity_count * 100) if course.activity_count > 0 else 0 %}
                             <div class="progress-bar-container">
                                 <div class="progress-bar-fill" style="width: {{ progress }}%"></div>
                             </div>
                             <span class="progress-text">{{ progress|round|int }}% Complete</span>
                         </div>
-                        <a href="{{ url_for('student.course_detail', course_id=course._id) }}" class="btn btn-sm btn-outline">
+                        <a href="{{ url_for(\\'student.course_detail\\', course_id=course._id) }}" class="btn btn-sm btn-outline">
                             View Details →
                         </a>
                     </div>
@@ -91,8 +95,8 @@
                 </div>
             {% else %}
                 <div class="empty-state">
-                    <p>📭 You haven't enrolled in any courses yet.</p>
-                    <a href="{{ url_for('student.browse_courses') }}" class="btn btn-primary">Browse Available Courses</a>
+                    <p>📭 You haven\\'t enrolled in any courses yet.</p>
+                    <a href="{{ url_for(\\'student.browse_courses\\') }}" class="btn btn-primary">Browse Available Courses</a>
                 </div>
             {% endif %}
         </div>
@@ -101,7 +105,7 @@
         <div class="dashboard-section">
             <div class="section-header">
                 <h2>📝 Recent Activities</h2>
-                <a href="{{ url_for('student.my_activities') }}" class="btn-link">View All →</a>
+                <a href="{{ url_for(\\'student.my_activities\\') }}" class="btn-link">View All →</a>
             </div>
 
             {% if recent_activities %}
@@ -109,15 +113,15 @@
                     {% for activity in recent_activities %}
                     <div class="activity-item">
                         <div class="activity-icon">
-                            {% if activity.type == 'poll' %}🗳️
-                            {% elif activity.type == 'word_cloud' %}☁️
+                            {% if activity.type == \\'poll\\' %}🗳️
+                            {% elif activity.type == \\'word_cloud\\' %}☁️
                             {% else %}✍️{% endif %}
                         </div>
                         <div class="activity-content">
                             <h4>{{ activity.title }}</h4>
                             <p class="activity-meta">
                                 <span class="course-badge">{{ activity.course_code }}</span>
-                                <span class="type-badge">{{ activity.type|replace('_', ' ')|title }}</span>
+                                <span class="type-badge">{{ activity.type|replace(\\'_\\', \\' \\')|title }}</span>
                             </p>
                         </div>
                         <div class="activity-actions">
@@ -125,7 +129,7 @@
                                 <span class="status-badge status-completed">✓ Completed</span>
                             {% else %}
                                 <span class="status-badge status-pending">⏳ Pending</span>
-                                <a href="{{ url_for('student.view_activity', activity_id=activity._id) }}" 
+                                <a href="{{ url_for(\\'student.view_activity\\', activity_id=activity._id) }}" 
                                    class="btn btn-sm btn-primary">Participate</a>
                             {% endif %}
                         </div>
@@ -153,7 +157,7 @@
                     <div class="breakdown-item">
                         <span class="breakdown-label">🗳️ Polls</span>
                         <div class="breakdown-bar">
-                            {% set poll_count = recent_activities|selectattr('type', 'equalto', 'poll')|list|length %}
+                            {% set poll_count = recent_activities|selectattr(\\'type\\', \\'equalto\\', \\'poll\\')|list|length %}
                             <div class="breakdown-fill" style="width: {{ (poll_count / recent_activities|length * 100) if recent_activities else 0 }}%; background: #8b5cf6;"></div>
                         </div>
                         <span class="breakdown-count">{{ poll_count }}</span>
@@ -161,7 +165,7 @@
                     <div class="breakdown-item">
                         <span class="breakdown-label">☁️ Word Clouds</span>
                         <div class="breakdown-bar">
-                            {% set wc_count = recent_activities|selectattr('type', 'equalto', 'word_cloud')|list|length %}
+                            {% set wc_count = recent_activities|selectattr(\\'type\\', \\'equalto\\', \\'word_cloud\\')|list|length %}
                             <div class="breakdown-fill" style="width: {{ (wc_count / recent_activities|length * 100) if recent_activities else 0 }}%; background: #ec4899;"></div>
                         </div>
                         <span class="breakdown-count">{{ wc_count }}</span>
@@ -169,7 +173,7 @@
                     <div class="breakdown-item">
                         <span class="breakdown-label">✍️ Short Answers</span>
                         <div class="breakdown-bar">
-                            {% set sa_count = recent_activities|selectattr('type', 'equalto', 'short_answer')|list|length %}
+                            {% set sa_count = recent_activities|selectattr(\\'type\\', \\'equalto\\', \\'short_answer\\')|list|length %}
                             <div class="breakdown-fill" style="width: {{ (sa_count / recent_activities|length * 100) if recent_activities else 0 }}%; background: #3b82f6;"></div>
                         </div>
                         <span class="breakdown-count">{{ sa_count }}</span>
@@ -180,15 +184,15 @@
             <div class="analytics-card">
                 <h3>Quick Actions</h3>
                 <div class="quick-actions">
-                    <a href="{{ url_for('student.browse_courses') }}" class="quick-action-btn">
+                    <a href="{{ url_for(\\'student.browse_courses\\') }}" class="quick-action-btn">
                         <span class="action-icon">🔍</span>
                         <span>Browse Courses</span>
                     </a>
-                    <a href="{{ url_for('student.my_activities') }}" class="quick-action-btn">
+                    <a href="{{ url_for(\\'student.my_activities\\') }}" class="quick-action-btn">
                         <span class="action-icon">📝</span>
                         <span>My Activities</span>
                     </a>
-                    <a href="{{ url_for('student.leaderboard') }}" class="quick-action-btn">
+                    <a href="{{ url_for(\\'student.leaderboard\\') }}" class="quick-action-btn">
                         <span class="action-icon">🏆</span>
                         <span>Leaderboard</span>
                     </a>
@@ -560,3 +564,10 @@
 }
 </style>
 {% endblock %}
+"""
+
+# Write to file
+with open('templates/student/dashboard.html', 'w', encoding='utf-8') as f:
+    f.write(new_content)
+
+print("✅ Dashboard template replaced successfully!")

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}My Courses - Student{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>📚 My Courses</h1>
+        <p class="text-muted">View your enrolled courses and progress</p>
+    </div>
+
+    {% if courses %}
+    <div class="grid grid-2">
+        {% for course in courses %}
+        <div class="card course-card">
+            <div class="card-body">
+                <div class="course-header">
+                    <h2>{{ course.name }}</h2>
+                    <span class="course-code">{{ course.code }}</span>
+                </div>
+                
+                <p class="course-description">
+                    {{ course.description or 'No description available' }}
+                </p>
+                
+                <!-- Progress Bar -->
+                <div class="progress-section">
+                    <div class="progress-header">
+                        <span>Progress</span>
+                        <span class="progress-percentage">{{ course.completion_rate|round }}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ course.completion_rate }}%"></div>
+                    </div>
+                    <div class="progress-stats">
+                        <span>{{ course.completed_activities }} / {{ course.total_activities }} activities completed</span>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="card-actions">
+                    <a href="{{ url_for('student.course_detail', course_id=course._id) }}" 
+                       class="btn btn-primary">
+                        View Details →
+                    </a>
+                    <button onclick="unenrollCourse('{{ course._id }}')" 
+                            class="btn btn-outline btn-danger">
+                        Unenroll
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center empty-state">
+            <div class="empty-icon">📚</div>
+            <h2>No Courses Enrolled</h2>
+            <p>You haven't enrolled in any courses yet.</p>
+            <a href="{{ url_for('student.browse_courses') }}" class="btn btn-primary">
+                Browse Courses
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.course-card {
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s;
+}
+.course-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+.course-code {
+    background-color: #4CAF50;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.course-description {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+.progress-section {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-radius: 8px;
+}
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+.progress-percentage {
+    color: #4CAF50;
+}
+.progress-bar {
+    height: 8px;
+    background-color: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+.progress-fill {
+    height: 100%;
+    background-color: #4CAF50;
+    transition: width 0.3s;
+}
+.progress-stats {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+.card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+.empty-state {
+    padding: 3rem 2rem;
+}
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+</style>
+
+<script>
+async function unenrollCourse(courseId) {
+    if (!confirm('Are you sure you want to unenroll from this course?')) return;
+    
+    showLoading();
+    try {
+        const response = await fetch(`/student/unenroll/${courseId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        hideLoading();
+        
+        if (data.success) {
+            showSuccess('Successfully unenrolled from course');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showError(data.message || 'Failed to unenroll');
+        }
+    } catch (error) {
+        hideLoading();
+        showError('An error occurred');
+    }
+}
+</script>
+{% endblock %}

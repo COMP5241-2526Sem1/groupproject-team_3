@@ -81,7 +81,13 @@ def login():
     if request.method == 'GET':
         # Redirect to dashboard if already logged in
         if 'user_id' in session:
-            return redirect(url_for('course.dashboard'))
+            role = session.get('role')
+            if role == 'admin':
+                return redirect(url_for('admin.admin_dashboard'))
+            elif role == 'student':
+                return redirect(url_for('student.dashboard'))
+            else:  # teacher
+                return redirect(url_for('course.dashboard'))
         return render_template('login.html')
     
     try:
@@ -112,7 +118,9 @@ def login():
             # Return redirect URL based on role
             if user['role'] == 'admin':
                 redirect_url = url_for('admin.admin_dashboard')
-            else:
+            elif user['role'] == 'student':
+                redirect_url = url_for('student.dashboard')
+            else:  # teacher
                 redirect_url = url_for('course.dashboard')
             
             return jsonify({

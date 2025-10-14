@@ -35,8 +35,7 @@ def student_required(f):
 @student_required
 def dashboard():
     """
-    Student dashboard
-    Shows enrolled courses and available activities
+    Student dashboard - Overview of learning activities and progress
     """
     try:
         user_id = session.get('user_id')
@@ -49,35 +48,53 @@ def dashboard():
         enrolled_course_ids = user.get('enrolled_courses', [])
         enrolled_courses = []
         
+        # Get recent activities across all enrolled courses
+        recent_activities = []
+        total_activities = 0
+        completed_activities = 0
+        
         for course_id in enrolled_course_ids:
             course = Course.find_by_id(course_id)
             if course:
                 # Get activities for this course
-                activities = Activity.find_by_course(course_id)
-                course['activities'] = list(activities)
-                course['activity_count'] = len(course['activities'])
+                activities = list(Activity.find_by_course(course_id))
+                total_activities += len(activities)
+                
+                # Get recent activities with course info
+                for activity in activities[:3]:  # Get last 3 activities per course
+                    activity['course_name'] = course.get('name')
+                    activity['course_code'] = course.get('code')
+                    
+                    # Check if student has completed this activity
+                    responses = activity.get('responses', [])
+                    student_response = next((r for r in responses 
+                                           if r.get('student_id') == user.get('student_id')), None)
+                    activity['completed'] = student_response is not None
+                    if activity['completed']:
+                        completed_activities += 1
+                    
+                    recent_activities.append(activity)
+                
+                course['activity_count'] = len(activities)
                 enrolled_courses.append(course)
         
-        # Get all available courses for enrollment
-        all_courses = list(Course.get_all())
-        available_courses = [c for c in all_courses 
-                           if str(c['_id']) not in enrolled_course_ids]
+        # Sort recent activities by date
+        recent_activities.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        recent_activities = recent_activities[:5]  # Show top 5 recent activities
         
-        # Get student's submission statistics
-        total_submissions = 0
-        for course in enrolled_courses:
-            for activity in course.get('activities', []):
-                responses = activity.get('responses', [])
-                # Count responses from this student
-                student_responses = [r for r in responses 
-                                   if r.get('student_id') == user.get('student_id') or
-                                      r.get('student_name') == user.get('username')]
-                total_submissions += len(student_responses)
+        # Calculate completion rate
+        completion_rate = (completed_activities / total_activities * 100) if total_activities > 0 else 0
+        
+        # Get total submissions count
+        total_submissions = completed_activities
         
         return render_template('student/dashboard.html',
             user=user,
             enrolled_courses=enrolled_courses,
-            available_courses=available_courses,
+            recent_activities=recent_activities,
+            total_activities=total_activities,
+            completed_activities=completed_activities,
+            completion_rate=round(completion_rate, 1),
             total_submissions=total_submissions
         )
         
@@ -308,7 +325,7 @@ def my_responses():
                         'activity': activity,
                         'course': course,
                         'response': student_response,
-                        'submitted_at': student_response.get('timestamp')
+                        'submitted_at': student_response.get('submitted_at')
                     })
         
         # Sort by submission time
@@ -323,3 +340,148 @@ def my_responses():
         logger.error(f"Error loading responses: {e}")
         return render_template('error.html', 
             message='Failed to load responses'), 500
+
+@student_bp.route('/my-courses')
+@student_required
+def my_courses():
+    """
+    View all enrolled courses
+    """
+    try:
+        user_id = session.get('user_id')
+        user = User.find_by_id(user_id)
+        
+        enrolled_course_ids = user.get('enrolled_courses', [])
+        enrolled_courses = []
+        
+        for course_id in enrolled_course_ids:
+            course = Course.find_by_id(course_id)
+            if course:
+                # Get statistics
+                activities = list(Activity.find_by_course(course_id))
+                total_activities = len(activities)
+                
+                # Count completed activities
+                completed = 0
+                for activity in activities:
+                    responses = activity.get('responses', [])
+                    if any(r.get('student_id') == user.get('student_id') for r in responses):
+                        completed += 1
+                
+                course['total_activities'] = total_activities
+                course['completed_activities'] = completed
+                course['completion_rate'] = (completed / total_activities * 100) if total_activities > 0 else 0
+                enrolled_courses.append(course)
+        
+        return render_template('student/my_courses.html',
+            user=user,
+            courses=enrolled_courses
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading my courses: {e}")
+        return render_template('error.html', message='Failed to load courses'), 500
+
+@student_bp.route('/browse-courses')
+@student_required
+def browse_courses():
+    """
+    Browse and enroll in available courses
+    """
+    try:
+        user_id = session.get('user_id')
+        user = User.find_by_id(user_id)
+        
+        # Get all courses
+        all_courses = list(Course.get_all())
+        enrolled_course_ids = [str(cid) for cid in user.get('enrolled_courses', [])]
+        
+        # Separate enrolled and available courses
+        available_courses = []
+        for course in all_courses:
+            course_id_str = str(course['_id'])
+            if course_id_str not in enrolled_course_ids:
+                # Get course statistics
+                activities = list(Activity.find_by_course(course_id_str))
+                course['activity_count'] = len(activities)
+                
+                # Get teacher info
+                teacher = User.find_by_id(course.get('teacher_id'))
+                course['teacher_name'] = teacher.get('username') if teacher else 'Unknown'
+                
+                available_courses.append(course)
+        
+        return render_template('student/browse_courses.html',
+            user=user,
+            courses=available_courses
+        )
+        
+    except Exception as e:
+        logger.error(f"Error browsing courses: {e}")
+        return render_template('error.html', message='Failed to load courses'), 500
+
+@student_bp.route('/my-activities')
+@student_required
+def my_activities():
+    """
+    View all activities from enrolled courses
+    """
+    try:
+        user_id = session.get('user_id')
+        user = User.find_by_id(user_id)
+        
+        enrolled_course_ids = user.get('enrolled_courses', [])
+        all_activities = []
+        
+        for course_id in enrolled_course_ids:
+            course = Course.find_by_id(course_id)
+            if not course:
+                continue
+            
+            activities = list(Activity.find_by_course(course_id))
+            
+            for activity in activities:
+                # Check if completed
+                responses = activity.get('responses', [])
+                student_response = next((r for r in responses 
+                                       if r.get('student_id') == user.get('student_id')), None)
+                
+                activity['course_name'] = course.get('name')
+                activity['course_code'] = course.get('code')
+                activity['completed'] = student_response is not None
+                activity['response_count'] = len(responses)
+                all_activities.append(activity)
+        
+        # Sort by date
+        all_activities.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        
+        return render_template('student/my_activities.html',
+            user=user,
+            activities=all_activities
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading activities: {e}")
+        return render_template('error.html', message='Failed to load activities'), 500
+
+@student_bp.route('/leaderboard')
+@student_required
+def leaderboard():
+    """
+    View leaderboard (placeholder for future implementation)
+    """
+    try:
+        user_id = session.get('user_id')
+        user = User.find_by_id(user_id)
+        
+        # TODO: Implement actual leaderboard logic
+        # For now, show a placeholder
+        
+        return render_template('student/leaderboard.html',
+            user=user,
+            message='Leaderboard feature coming soon!'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading leaderboard: {e}")
+        return render_template('error.html', message='Failed to load leaderboard'), 500

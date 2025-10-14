@@ -77,12 +77,18 @@ class User:
         Find user by ID
         
         Args:
-            user_id (str): User ID
+            user_id (str or ObjectId): User ID
             
         Returns:
             dict: User document or None
         """
-        return db_service.find_one(User.COLLECTION_NAME, {'_id': ObjectId(user_id)})
+        # Convert to ObjectId if it's a string
+        if isinstance(user_id, str):
+            try:
+                user_id = ObjectId(user_id)
+            except:
+                return None
+        return db_service.find_one(User.COLLECTION_NAME, {'_id': user_id})
     
     @staticmethod
     def find_by_email(email):

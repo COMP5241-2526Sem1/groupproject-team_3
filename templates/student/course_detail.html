@@ -41,7 +41,11 @@
                         <td>
                             <strong>{{ activity.title }}</strong>
                             <br>
-                            <small>{{ activity.content.question[:80] }}...</small>
+                            {% if activity.content.get('question') %}
+                            <small>{{ activity.content.get('question')[:80] }}...</small>
+                            {% elif activity.content.get('prompt') %}
+                            <small>{{ activity.content.get('prompt')[:80] }}...</small>
+                            {% endif %}
                         </td>
                         <td>
                             <span class="activity-type activity-{{ activity.type }}">
