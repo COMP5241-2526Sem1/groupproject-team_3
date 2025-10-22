@@ -10,7 +10,8 @@
             <div>
                 <h1>{{ activity.title }}</h1>
                 <p style="color: #6b7280; margin: 0.5rem 0;">
-                    Course: <strong>{{ course.name }}</strong> | 
+                    Course: <strong>{{ course.name if course else 'Unknown' }}</strong> 
+                    ({{ enrolled_count }} student{{ 's' if enrolled_count != 1 else '' }} enrolled) | 
                     Type: <span class="activity-type activity-{{ activity.type.replace('_', '-') }}">
                         {% if activity.type == 'poll' %}📊 Poll
                         {% elif activity.type == 'short_answer' %}✍️ Short Answer
@@ -51,12 +52,16 @@
         </div>
         <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
             <div class="stat-value">
-                {{ ((response_count / (course.students|length)) * 100)|round|int if course.students else 0 }}%
+                {% if participation_rate is not none %}
+                    {{ participation_rate }}%
+                {% else %}
+                    N/A
+                {% endif %}
             </div>
             <div class="stat-label">Participation Rate</div>
         </div>
         <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
-            <div class="stat-value">{{ activity.created_at.strftime('%b %d') }}</div>
+            <div class="stat-value">{% if activity.created_at %}{{ activity.created_at.strftime('%b %d') }}{% else %}N/A{% endif %}</div>
             <div class="stat-label">Created</div>
         </div>
     </div>
@@ -79,15 +84,20 @@
                 {% if activity.type == 'poll' %}
                 <div id="pollResults">
                     {% for option in activity.content.options %}
-                    {% set option_count = activity.responses|selectattr('selected_options', 'containing', option)|list|length %}
+                    {% set option_count = namespace(value=0) %}
+                    {% for response in activity.responses %}
+                        {% if option in response.selected_options %}
+                            {% set option_count.value = option_count.value + 1 %}
+                        {% endif %}
+                    {% endfor %}
                     <div style="margin-bottom: 1.5rem;">
                         <div class="flex-between mb-1">
                             <span>{{ option }}</span>
-                            <span><strong>{{ option_count }}</strong> votes</span>
+                            <span><strong>{{ option_count.value }}</strong> votes</span>
                         </div>
                         <div style="background-color: #e5e7eb; height: 20px; border-radius: 10px; overflow: hidden;">
                             <div style="background-color: var(--primary-color); height: 100%; 
-                                        width: {{ (option_count / response_count * 100)|round }}%;
+                                        width: {{ (option_count.value / response_count * 100)|round }}%;
                                         transition: width 0.3s;"></div>
                         </div>
                     </div>
@@ -144,9 +154,9 @@
                     {% for response in activity.responses %}
                     <div class="card mb-2">
                         <p><strong>{{ response.student_id or 'Anonymous' }}:</strong></p>
-                        <p>{{ response.text }}</p>
+                        <p>{{ response.text or response.get('response_data', {}).get('text', 'No response text') }}</p>
                         <p style="font-size: 0.875rem; color: #6b7280;">
-                            Submitted: {{ response.submitted_at.strftime('%Y-%m-%d %H:%M') }}
+                            Submitted: {% if response.submitted_at %}{{ response.submitted_at.strftime('%Y-%m-%d %H:%M') }}{% else %}Unknown time{% endif %}
                         </p>
                     </div>
                     {% endfor %}

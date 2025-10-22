@@ -60,22 +60,30 @@ def dashboard():
                 activities = list(Activity.find_by_course(course_id))
                 total_activities += len(activities)
                 
+                # Count completed activities for this specific course
+                course_completed = 0
+                
                 # Get recent activities with course info
-                for activity in activities[:3]:  # Get last 3 activities per course
-                    activity['course_name'] = course.get('name')
-                    activity['course_code'] = course.get('code')
-                    
+                for activity in activities:
                     # Check if student has completed this activity
                     responses = activity.get('responses', [])
                     student_response = next((r for r in responses 
                                            if r.get('student_id') == user.get('student_id')), None)
-                    activity['completed'] = student_response is not None
-                    if activity['completed']:
+                    is_completed = student_response is not None
+                    
+                    if is_completed:
+                        course_completed += 1
                         completed_activities += 1
                     
-                    recent_activities.append(activity)
+                    # Add to recent activities list (only first 3 per course)
+                    if len([a for a in recent_activities if a.get('course_code') == course.get('code')]) < 3:
+                        activity['course_name'] = course.get('name')
+                        activity['course_code'] = course.get('code')
+                        activity['completed'] = is_completed
+                        recent_activities.append(activity)
                 
                 course['activity_count'] = len(activities)
+                course['completed_activities'] = course_completed
                 enrolled_courses.append(course)
         
         # Sort recent activities by date
