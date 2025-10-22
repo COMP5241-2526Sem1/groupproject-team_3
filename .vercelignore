@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+Project3/
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+uploads/
+*.log
+*.db
+*.sqlite
+
+# Test files
+test_*.py
+debug_*.py
+check_*.py
+fix_*.py
+create_*.py
+seed_database.py
+init_db.py
+
+# Documentation (keep markdown docs but not test guides)
+*_TEST_*.md
+*_TESTING_*.md
+
+# Batch files
+*.bat
+*.ps1
+start*.ps1
+start*.bat
+
+# CSV files
+*.csv
