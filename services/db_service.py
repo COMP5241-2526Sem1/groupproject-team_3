@@ -29,23 +29,48 @@ class DatabaseService:
         return cls._instance
     
     def __init__(self):
-        """Initialize database connection"""
-        if self._client is None:
-            try:
-                # SSL/TLS configuration for Python 3.13+ compatibility
-                self._client = MongoClient(
-                    Config.MONGODB_URI,
-                    serverSelectionTimeoutMS=5000,
-                    tlsAllowInvalidCertificates=True  # Allow invalid certificates for Python 3.13+
-                )
-                # Test connection
-                self._client.admin.command('ping')
-                self._db = self._client[Config.DATABASE_NAME]
-                logger.info(f"Successfully connected to MongoDB: {Config.DATABASE_NAME}")
-                self._create_indexes()
-            except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-                logger.error(f"Failed to connect to MongoDB: {e}")
-                raise
+        """Initialize database service object without connecting yet.
+
+        Connection to MongoDB is deferred until first use to avoid raising
+        errors during module import (important in serverless environments).
+        """
+        # Do not attempt to connect here. Connection will be created lazily.
+        return
+
+    def _connect(self):
+        """Establish connection to MongoDB and create indexes.
+
+        This is called lazily when a database operation is attempted.
+        """
+        if self._client is not None:
+            return
+
+        try:
+            # SSL/TLS configuration for Python 3.13+ compatibility
+            self._client = MongoClient(
+                Config.MONGODB_URI,
+                serverSelectionTimeoutMS=5000,
+                tlsAllowInvalidCertificates=True  # Allow invalid certificates for Python 3.13+
+            )
+            # Test connection
+            self._client.admin.command('ping')
+            self._db = self._client[Config.DATABASE_NAME]
+            logger.info(f"Successfully connected to MongoDB: {Config.DATABASE_NAME}")
+            self._create_indexes()
+        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+            logger.error(f"Failed to connect to MongoDB: {e}")
+            # Keep client as None so subsequent attempts can retry
+            self._client = None
+            self._db = None
+            raise
+
+    def _ensure_connection(self):
+        """Ensure there is an active connection to the database.
+
+        Call this at the start of any public DB method.
+        """
+        if self._client is None or self._db is None:
+            self._connect()
     
     def _create_indexes(self):
         """
@@ -89,6 +114,8 @@ class DatabaseService:
         Returns:
             Collection: MongoDB collection object
         """
+        # Ensure we have a connection before returning a collection
+        self._ensure_connection()
         return self._db[collection_name]
     
     def insert_one(self, collection_name, document):
@@ -103,6 +130,7 @@ class DatabaseService:
             InsertOneResult: Result of the insert operation
         """
         try:
+            self._ensure_connection()
             result = self._db[collection_name].insert_one(document)
             logger.info(f"Inserted document into {collection_name}: {result.inserted_id}")
             return result
@@ -122,6 +150,7 @@ class DatabaseService:
             dict: Found document or None
         """
         try:
+            self._ensure_connection()
             return self._db[collection_name].find_one(query)
         except Exception as e:
             logger.error(f"Error finding document in {collection_name}: {e}")
@@ -141,6 +170,7 @@ class DatabaseService:
             Cursor: MongoDB cursor with results
         """
         try:
+            self._ensure_connection()
             cursor = self._db[collection_name].find(query)
             if sort:
                 cursor = cursor.sort(sort)
@@ -164,6 +194,7 @@ class DatabaseService:
             UpdateResult: Result of the update operation
         """
         try:
+            self._ensure_connection()
             result = self._db[collection_name].update_one(query, update)
             logger.info(f"Updated document in {collection_name}: {result.modified_count} modified")
             return result
@@ -183,6 +214,7 @@ class DatabaseService:
             DeleteResult: Result of the delete operation
         """
         try:
+            self._ensure_connection()
             result = self._db[collection_name].delete_one(query)
             logger.info(f"Deleted document from {collection_name}: {result.deleted_count} deleted")
             return result
@@ -202,6 +234,7 @@ class DatabaseService:
             int: Number of documents
         """
         try:
+            self._ensure_connection()
             if query is None:
                 query = {}
             return self._db[collection_name].count_documents(query)
