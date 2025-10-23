@@ -18,23 +18,23 @@ import traceback
 # doesn't crash on import and we can inspect logs.
 try:
     app = create_app('production')
-    application = app
 except Exception as e:
     # Log the traceback to stdout/stderr (captured by Vercel logs)
     print("ERROR: Failed to initialize Flask app:")
     traceback.print_exc()
 
     # Create a minimal fallback Flask app that returns 500 for all requests
-    fallback = Flask("fallback_app")
+    app = Flask("fallback_app")
 
-    @fallback.route("/", defaults={"path": ""})
-    @fallback.route("/<path:path>")
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
     def _fail(path=""):
         body = ("Application failed to initialize. Check logs for details.\n"
                 f"Error: {str(e)}")
         return Response(body, status=500, mimetype='text/plain')
 
-    application = fallback
+# Export as both 'app' and 'application' for compatibility
+application = app
 
 # For local testing
 if __name__ == '__main__':
