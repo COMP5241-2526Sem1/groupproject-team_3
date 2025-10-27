@@ -207,46 +207,98 @@ def activity_detail(activity_id):
     Shows activity info and responses
     """
     try:
+        print(f"\n{'='*60}")
+        print(f"DEBUG: activity_detail called with ID: {activity_id}")
+        print(f"DEBUG: Session user_id: {session.get('user_id')}")
+        print(f"DEBUG: Session role: {session.get('role')}")
+        print(f"{'='*60}\n")
+        
         activity = Activity.find_by_id(activity_id)
+        print(f"DEBUG: Activity found: {activity is not None}")
         
         if not activity:
+            print("DEBUG: Returning 404 - Activity not found")
             return "Activity not found", 404
         
+        print(f"DEBUG: Activity teacher_id: {activity.get('teacher_id')} (type: {type(activity.get('teacher_id'))})")
+        print(f"DEBUG: Session user_id: {session.get('user_id')} (type: {type(session.get('user_id'))})")
+        
         # Check if user owns this activity
-        if activity['teacher_id'] != session['user_id']:
+        if str(activity.get('teacher_id')) != str(session.get('user_id')):
+            print("DEBUG: Returning 403 - Access denied")
             return "Access denied", 403
         
+        print("DEBUG: Ownership check passed")
         activity['_id'] = str(activity['_id'])
         
         # Get course info
+        print(f"DEBUG: Getting course {activity.get('course_id')}")
         course = Course.find_by_id(activity['course_id'])
+        print(f"DEBUG: Course found: {course is not None}")
+        
+        if not course:
+            logger.warning(f"Course not found for activity {activity_id}: {activity.get('course_id')}")
+            # Create a minimal course object to prevent template errors
+            course = {
+                'name': 'Unknown Course',
+                'students': []
+            }
+            print("DEBUG: Using fallback course")
+        else:
+            print(f"DEBUG: Course name: {course.get('name')}")
         
         # Calculate response statistics
         responses = activity.get('responses', [])
         response_count = len(responses)
+        print(f"DEBUG: {response_count} responses found")
+        print(f"DEBUG: Activity type: {activity.get('type')}")
+        
+        # Get enrolled student count from students collection (more reliable than course.students)
+        from models.student import Student
+        enrolled_students = list(Student.find_by_course(activity['course_id']))
+        enrolled_count = len(enrolled_students)
+        print(f"DEBUG: {enrolled_count} students enrolled in course")
+        
+        # Calculate participation rate
+        participation_rate = None
+        if enrolled_count > 0:
+            participation_rate = round((response_count / enrolled_count) * 100)
+        print(f"DEBUG: Participation rate: {participation_rate}%")
         
         # Get grouped answers if short answer type
         grouped_answers = None
         if activity['type'] == Activity.TYPE_SHORT_ANSWER and responses:
+            print("DEBUG: Processing short answer grouping...")
             # Check if already grouped
             if 'grouped_answers' not in activity:
+                print("DEBUG: Calling AI to group answers...")
                 # Group answers using AI
                 grouped_answers = genai_service.group_answers(responses, activity['content']['question'])
                 # Save grouped answers
                 Activity.update_activity(activity_id, {'grouped_answers': grouped_answers})
+                print("DEBUG: Grouped answers saved")
             else:
                 grouped_answers = activity['grouped_answers']
+                print("DEBUG: Using cached grouped answers")
         
+        print("DEBUG: Rendering template...")
         return render_template(
             'activity_detail.html',
             activity=activity,
             course=course,
             response_count=response_count,
+            enrolled_count=enrolled_count,
+            participation_rate=participation_rate,
             grouped_answers=grouped_answers
         )
         
     except Exception as e:
+        print(f"\n{'!'*60}")
+        print(f"ERROR in activity_detail: {type(e).__name__}: {e}")
+        print(f"{'!'*60}\n")
         logger.error(f"Activity detail error: {e}")
+        import traceback
+        traceback.print_exc()
         return "Error loading activity", 500
 
 @activity_bp.route('/a/<link>')

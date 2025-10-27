@@ -35,9 +35,17 @@ def create_app(config_name='default'):
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     
-    # Create upload folder if it doesn't exist
-    if not os.path.exists(Config.UPLOAD_FOLDER):
-        os.makedirs(Config.UPLOAD_FOLDER)
+    # Create upload folder if it doesn't exist (skip in production/serverless)
+    # Vercel functions run in read-only filesystem, use /tmp for temporary files
+    if config_name != 'production' and not os.path.exists(Config.UPLOAD_FOLDER):
+        try:
+            os.makedirs(Config.UPLOAD_FOLDER)
+        except OSError:
+            # If we can't create uploads folder (e.g., read-only filesystem),
+            # use /tmp directory which is writable in serverless environments
+            Config.UPLOAD_FOLDER = '/tmp/uploads'
+            if not os.path.exists(Config.UPLOAD_FOLDER):
+                os.makedirs(Config.UPLOAD_FOLDER)
     
     # Register blueprints
     from routes.auth_routes import auth_bp

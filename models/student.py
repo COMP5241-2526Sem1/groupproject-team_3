@@ -98,6 +98,36 @@ class Student:
         )
     
     @staticmethod
+    def create(student_data):
+        """
+        Create a new student record
+        
+        Args:
+            student_data (dict): Student data containing student_id, name, email, course_id
+            
+        Returns:
+            str: Inserted student ID or None if already exists
+        """
+        # Check if student already exists in this course
+        existing = db_service.find_one(
+            Student.COLLECTION_NAME,
+            {
+                'student_id': student_data.get('student_id'),
+                'course_id': student_data.get('course_id')
+            }
+        )
+        
+        if existing:
+            return None  # Student already enrolled in this course
+        
+        # Add timestamp
+        student_data['created_at'] = datetime.utcnow()
+        
+        # Insert new student
+        result = db_service.insert_one(Student.COLLECTION_NAME, student_data)
+        return str(result.inserted_id) if result.inserted_id else None
+    
+    @staticmethod
     def count_by_course(course_id):
         """
         Count students in a course
