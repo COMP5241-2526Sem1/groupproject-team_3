@@ -46,7 +46,7 @@ class GenAIService:
         self.timeout = Config.OPENAI_TIMEOUT
         logger.info(f"GenAI Service initialized with model: {self.model}")
     
-    def generate_activity(self, teaching_content, activity_type='short_answer'):
+    def generate_activity(self, teaching_content, activity_type='short_answer', num_questions=1):
         """
         Generate learning activity based on teaching content
         AI-generated function for creating educational activities
@@ -54,28 +54,48 @@ class GenAIService:
         Args:
             teaching_content (str): Teaching topic or keywords
             activity_type (str): Type of activity (poll, short_answer, word_cloud)
+            num_questions (int): Number of questions to generate (1-10, only for poll type)
             
         Returns:
             dict: Generated activity with questions and options
         """
         try:
+            # Validate num_questions
+            num_questions = max(1, min(10, int(num_questions)))
+            
             # Construct prompt based on activity type
             prompts = {
-                'poll': f"""Create a poll activity for the topic: {teaching_content}
+                'poll': f"""Create {num_questions} poll question(s) for the topic: {teaching_content}
                 
-Generate a poll with:
-1. A clear question related to the topic
-2. 4-5 multiple choice options
-3. An explanation of the correct answer
+For each question, generate:
+1. A clear multiple choice question related to the topic
+2. Exactly 4 options (labeled A, B, C, D)
+3. The correct answer (specify which option: A, B, C, or D)
+4. A brief explanation of why that answer is correct
 
 Return the response in JSON format:
 {{
-    "title": "Poll title",
-    "question": "Main question",
-    "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-    "correct_answer": "Option X",
-    "explanation": "Why this is the correct answer"
-}}""",
+    "title": "Poll Activity Title",
+    "questions": [
+        {{
+            "question": "Question text here?",
+            "options": [
+                {{"label": "A", "text": "First option"}},
+                {{"label": "B", "text": "Second option"}},
+                {{"label": "C", "text": "Third option"}},
+                {{"label": "D", "text": "Fourth option"}}
+            ],
+            "correct_answer": "A",
+            "explanation": "Brief explanation of why option A is correct"
+        }}
+    ]
+}}
+
+IMPORTANT: 
+- Generate exactly {num_questions} question(s)
+- Each question must have exactly 4 options
+- correct_answer must be one of: A, B, C, or D
+- Make questions challenging but fair for university students""",
                 
                 'short_answer': f"""Create 3 short-answer questions for the topic: {teaching_content}
                 
@@ -272,6 +292,28 @@ Return the analysis in JSON format:
             logger.error(f"Error translating text: {e}")
             return text  # Return original text on error
     
+    def evaluate_poll_answer(self, question, options, student_answer, correct_answer):
+        """
+        Evaluate student's poll answer
+        
+        Args:
+            question (str): The question text
+            options (list): List of option dicts with 'label' and 'text'
+            student_answer (str): Student's selected option (A, B, C, or D)
+            correct_answer (str): The correct option (A, B, C, or D)
+            
+        Returns:
+            dict: Evaluation result with is_correct and feedback
+        """
+        is_correct = student_answer == correct_answer
+        
+        return {
+            'is_correct': is_correct,
+            'correct_answer': correct_answer,
+            'student_answer': student_answer,
+            'feedback': 'Correct!' if is_correct else f'Incorrect. The correct answer is {correct_answer}.'
+        }
+    
     def _get_fallback_activity(self, activity_type, teaching_content):
         """
         Provide fallback activity when API fails
@@ -280,8 +322,19 @@ Return the analysis in JSON format:
         fallback = {
             'poll': {
                 'title': f'Poll: {teaching_content}',
-                'question': f'What is your understanding of {teaching_content}?',
-                'options': ['Excellent', 'Good', 'Fair', 'Need more help'],
+                'questions': [
+                    {
+                        'question': f'What is your current understanding level of {teaching_content}?',
+                        'options': [
+                            {'label': 'A', 'text': 'Excellent - I understand completely'},
+                            {'label': 'B', 'text': 'Good - I understand most concepts'},
+                            {'label': 'C', 'text': 'Fair - I need some clarification'},
+                            {'label': 'D', 'text': 'Poor - I need more help'}
+                        ],
+                        'correct_answer': 'B',
+                        'explanation': 'This is a self-assessment question.'
+                    }
+                ],
                 'activity_type': 'poll',
                 'source_content': teaching_content,
                 'note': 'Generated with fallback mechanism'

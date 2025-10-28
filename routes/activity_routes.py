@@ -70,17 +70,27 @@ def create_activity():
         content = {}
         
         if activity_type == Activity.TYPE_POLL:
-            content = {
-                'question': data.get('question', '').strip(),
-                'options': data.get('options', []),
-                'allow_multiple': data.get('allow_multiple', False)
-            }
-            
-            if not content['question'] or len(content['options']) < 2:
-                return jsonify({
-                    'success': False,
-                    'message': 'Poll must have a question and at least 2 options'
-                }), 400
+            # Check if this is AI-generated multi-question poll
+            poll_questions = data.get('poll_questions')
+            if poll_questions:
+                # Multi-question poll format (AI generated)
+                content = {
+                    'questions': poll_questions,
+                    'allow_multiple': data.get('allow_multiple', False)
+                }
+            else:
+                # Single question poll format (manual creation)
+                content = {
+                    'question': data.get('question', '').strip(),
+                    'options': data.get('options', []),
+                    'allow_multiple': data.get('allow_multiple', False)
+                }
+                
+                if not content['question'] or len(content['options']) < 2:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Poll must have a question and at least 2 options'
+                    }), 400
         
         elif activity_type == Activity.TYPE_SHORT_ANSWER:
             content = {
@@ -156,6 +166,7 @@ def ai_generate_activity():
         teaching_content = data.get('teaching_content', '').strip()
         activity_type = data.get('type', 'short_answer').strip()
         course_id = data.get('course_id', '').strip()
+        num_questions = int(data.get('num_questions', 1))
         
         if not teaching_content:
             return jsonify({
@@ -178,8 +189,8 @@ def ai_generate_activity():
             }), 403
         
         # Generate activity using AI
-        logger.info(f"Generating AI activity for: {teaching_content}")
-        generated = genai_service.generate_activity(teaching_content, activity_type)
+        logger.info(f"Generating AI activity for: {teaching_content} ({activity_type}, {num_questions} questions)")
+        generated = genai_service.generate_activity(teaching_content, activity_type, num_questions)
         
         # Mark as AI generated
         generated['ai_generated'] = True
@@ -362,12 +373,51 @@ def submit_response(activity_id):
         
         # Parse response based on activity type
         if activity['type'] == Activity.TYPE_POLL:
-            response_data['selected_options'] = data.get('selected_options', [])
-            if not response_data['selected_options']:
-                return jsonify({
-                    'success': False,
-                    'message': 'Please select at least one option'
-                }), 400
+            # Check if this is multi-question poll
+            poll_questions = activity['content'].get('questions')
+            
+            if poll_questions:
+                # Multi-question poll - evaluate answers
+                student_answers = data.get('answers', {})  # {question_index: selected_option}
+                
+                if not student_answers:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Please answer all questions'
+                    }), 400
+                
+                # Evaluate each answer
+                results = []
+                correct_count = 0
+                
+                for i, question in enumerate(poll_questions):
+                    student_answer = student_answers.get(str(i))
+                    correct_answer = question.get('correct_answer')
+                    
+                    is_correct = student_answer == correct_answer
+                    if is_correct:
+                        correct_count += 1
+                    
+                    results.append({
+                        'question_index': i,
+                        'student_answer': student_answer,
+                        'correct_answer': correct_answer,
+                        'is_correct': is_correct,
+                        'explanation': question.get('explanation', '')
+                    })
+                
+                response_data['answers'] = results
+                response_data['score'] = correct_count
+                response_data['total'] = len(poll_questions)
+                response_data['percentage'] = round((correct_count / len(poll_questions)) * 100, 1)
+            else:
+                # Single question poll (original format)
+                response_data['selected_options'] = data.get('selected_options', [])
+                if not response_data['selected_options']:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Please select at least one option'
+                    }), 400
         
         elif activity['type'] == Activity.TYPE_SHORT_ANSWER:
             response_data['text'] = data.get('text', '').strip()
@@ -390,10 +440,23 @@ def submit_response(activity_id):
         
         if success:
             logger.info(f"Response submitted to activity {activity_id}")
-            return jsonify({
+            
+            # Prepare result message
+            result = {
                 'success': True,
                 'message': 'Response submitted successfully'
-            }), 201
+            }
+            
+            # For multi-question polls, include evaluation results
+            if activity['type'] == Activity.TYPE_POLL and 'score' in response_data:
+                result['evaluation'] = {
+                    'score': response_data['score'],
+                    'total': response_data['total'],
+                    'percentage': response_data['percentage'],
+                    'answers': response_data['answers']
+                }
+            
+            return jsonify(result), 201
         else:
             return jsonify({
                 'success': False,
