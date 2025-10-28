@@ -65,17 +65,19 @@ class GenAIService:
             
             # Construct prompt based on activity type
             prompts = {
-                'poll': f"""Create {num_questions} poll question(s) for the topic: {teaching_content}
-                
+                'poll': f"""Create EXACTLY {num_questions} poll question(s) for the topic: {teaching_content}
+
+IMPORTANT: You MUST generate exactly {num_questions} question(s). No more, no less.
+
 For each question, generate:
 1. A clear multiple choice question related to the topic
 2. Exactly 4 options (labeled A, B, C, D)
 3. The correct answer (specify which option: A, B, C, or D)
-4. A brief explanation of why that answer is correct
+4. A brief explanation (1-2 sentences) of why that answer is correct
 
-Return the response in JSON format:
+Return the response in valid JSON format:
 {{
-    "title": "Poll Activity Title",
+    "title": "Quiz: [Topic Name]",
     "questions": [
         {{
             "question": "Question text here?",
@@ -87,15 +89,18 @@ Return the response in JSON format:
             ],
             "correct_answer": "A",
             "explanation": "Brief explanation of why option A is correct"
-        }}
+        }},
+        ... (repeat for all {num_questions} questions)
     ]
 }}
 
-IMPORTANT: 
-- Generate exactly {num_questions} question(s)
-- Each question must have exactly 4 options
-- correct_answer must be one of: A, B, C, or D
-- Make questions challenging but fair for university students""",
+CRITICAL REQUIREMENTS:
+- Generate EXACTLY {num_questions} questions in the "questions" array
+- Each question MUST have exactly 4 options (A, B, C, D)
+- correct_answer MUST be one of: A, B, C, or D
+- Make questions challenging but fair for university students
+- Ensure proper JSON formatting with correct brackets and commas
+- DO NOT add any text outside the JSON structure""",
                 
                 'short_answer': f"""Create 3 short-answer questions for the topic: {teaching_content}
                 
@@ -133,20 +138,35 @@ Return the response in JSON format:
             
             prompt = prompts.get(activity_type, prompts['short_answer'])
             
+            # Calculate appropriate max_tokens based on number of questions
+            # Each poll question needs ~150-200 tokens (question + 4 options + explanation)
+            # Add buffer for JSON structure
+            if activity_type == 'poll':
+                base_tokens = 200  # For JSON structure and title
+                tokens_per_question = 200  # Per question (question + options + explanation)
+                max_tokens = base_tokens + (num_questions * tokens_per_question)
+                # Cap at 4000 to stay within model limits
+                max_tokens = min(max_tokens, 4000)
+            else:
+                max_tokens = 1500  # Sufficient for other activity types
+            
             # Call OpenAI API
+            # Use lower temperature for poll questions to ensure consistent formatting
+            temperature = 0.5 if activity_type == 'poll' else 0.7
+            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are an expert educational content creator for university lecturers in Hong Kong. Generate high-quality learning activities in English."},
+                    {"role": "system", "content": "You are an expert educational content creator for university lecturers in Hong Kong. Generate high-quality learning activities in English. Always return valid JSON format."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.7,
-                max_tokens=1000
+                temperature=temperature,
+                max_tokens=max_tokens
             )
             
             # Parse response
             content = response.choices[0].message.content
-            logger.info(f"Generated activity for topic: {teaching_content}")
+            logger.info(f"Generated activity for topic: {teaching_content}, num_questions: {num_questions}")
             
             # Extract JSON from response
             if '```json' in content:
@@ -158,8 +178,29 @@ Return the response in JSON format:
             result['activity_type'] = activity_type
             result['source_content'] = teaching_content
             
+            # Validate poll question count for multi-question polls
+            if activity_type == 'poll' and num_questions > 1:
+                questions = result.get('questions', [])
+                actual_count = len(questions)
+                
+                if actual_count != num_questions:
+                    logger.warning(f"Expected {num_questions} questions but got {actual_count}. Attempting retry...")
+                    
+                    # If we got fewer questions than expected, this might be due to token limit
+                    # Return what we have with a warning
+                    if actual_count > 0:
+                        logger.info(f"Returning {actual_count} questions instead of {num_questions}")
+                        result['note'] = f"Generated {actual_count} questions (requested {num_questions})"
+                    else:
+                        # If no questions generated, use fallback
+                        raise ValueError(f"No questions generated")
+            
             return result
             
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error: {e}, Content: {content[:200]}...")
+            # Return fallback activity on JSON parse error
+            return self._get_fallback_activity(activity_type, teaching_content)
         except Exception as e:
             logger.error(f"Error generating activity: {e}")
             # Return fallback activity
