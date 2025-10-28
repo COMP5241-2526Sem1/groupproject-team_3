@@ -72,14 +72,19 @@ def create_activity():
         if activity_type == Activity.TYPE_POLL:
             # Check if this is AI-generated multi-question poll
             poll_questions = data.get('poll_questions')
+            logger.info(f"Creating poll activity. poll_questions present: {poll_questions is not None}")
+            
             if poll_questions:
                 # Multi-question poll format (AI generated)
+                logger.info(f"Multi-question poll with {len(poll_questions)} questions")
                 content = {
                     'questions': poll_questions,
                     'allow_multiple': data.get('allow_multiple', False)
                 }
+                logger.info(f"Content structure: {content.keys()}")
             else:
                 # Single question poll format (manual creation)
+                logger.info("Single question poll (manual)")
                 content = {
                     'question': data.get('question', '').strip(),
                     'options': data.get('options', []),

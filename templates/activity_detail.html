@@ -25,6 +25,32 @@
         </div>
         
         <div class="card-body">
+            {% if activity.type == 'poll' and activity.content.questions %}
+            <!-- Multi-Question Poll -->
+            <p><strong>Questions:</strong></p>
+            <div style="background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                {% for question in activity.content.questions %}
+                <div style="margin-bottom: 1.5rem; {% if not loop.last %}border-bottom: 1px solid #e5e7eb; padding-bottom: 1.5rem;{% endif %}">
+                    <p style="margin-bottom: 0.5rem;"><strong>Question {{ loop.index }}:</strong> {{ question.question }}</p>
+                    <p style="font-size: 0.875rem; margin-bottom: 0.5rem;"><strong>Options:</strong></p>
+                    <ul style="margin: 0; padding-left: 1.5rem;">
+                        {% for option in question.options %}
+                        <li style="margin: 0.25rem 0;">
+                            <strong>{{ option.label }}.</strong> {{ option.text }}
+                            {% if option.label == question.correct_answer %}
+                            <span style="color: #059669;">✓ (Correct)</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                        <strong>Explanation:</strong> {{ question.explanation }}
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Single Question Format -->
             <p><strong>Question:</strong> {{ activity.content.question }}</p>
             
             {% if activity.type == 'poll' %}
@@ -34,6 +60,7 @@
                 <li>{{ option }}</li>
                 {% endfor %}
             </ul>
+            {% endif %}
             {% endif %}
             
             {% if activity.ai_generated %}
@@ -83,6 +110,86 @@
                 <!-- Poll Results -->
                 {% if activity.type == 'poll' %}
                 <div id="pollResults">
+                    {% if activity.content.questions %}
+                    <!-- Multi-Question Poll Results -->
+                    {% for question in activity.content.questions %}
+                    <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                        <h3 style="margin-bottom: 1rem;">Question {{ loop.index }}: {{ question.question }}</h3>
+                        
+                        {% for option in question.options %}
+                        {% set option_count = namespace(value=0) %}
+                        {% set correct_count = namespace(value=0) %}
+                        
+                        {% for response in activity.responses %}
+                            {% if response.answers %}
+                                {% for answer in response.answers %}
+                                    {% if answer.question_index == loop.index0 %}
+                                        {% if answer.student_answer == option.label %}
+                                            {% set option_count.value = option_count.value + 1 %}
+                                            {% if answer.is_correct %}
+                                                {% set correct_count.value = correct_count.value + 1 %}
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <div class="flex-between mb-1">
+                                <span>
+                                    <strong>{{ option.label }}.</strong> {{ option.text }}
+                                    {% if option.label == question.correct_answer %}
+                                    <span style="color: #059669; margin-left: 0.5rem;">✓ Correct</span>
+                                    {% endif %}
+                                </span>
+                                <span><strong>{{ option_count.value }}</strong> responses</span>
+                            </div>
+                            <div style="background-color: #e5e7eb; height: 20px; border-radius: 10px; overflow: hidden;">
+                                <div style="background-color: {% if option.label == question.correct_answer %}#059669{% else %}#6366f1{% endif %}; 
+                                            height: 100%; 
+                                            width: {{ (option_count.value / response_count * 100)|round if response_count > 0 else 0 }}%;
+                                            transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Show correct answer percentage for this question -->
+                        {% set correct_total = namespace(value=0) %}
+                        {% for response in activity.responses %}
+                            {% if response.answers %}
+                                {% for answer in response.answers %}
+                                    {% if answer.question_index == loop.index0 and answer.is_correct %}
+                                        {% set correct_total.value = correct_total.value + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                        <p style="text-align: right; color: #6b7280; margin-top: 0.5rem;">
+                            <strong>{{ (correct_total.value / response_count * 100)|round if response_count > 0 else 0 }}%</strong> answered correctly
+                        </p>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- Overall Statistics for Multi-Question Poll -->
+                    <div style="background: #ecfdf5; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #059669;">
+                        <h3 style="margin-bottom: 1rem;">📊 Overall Statistics</h3>
+                        {% set total_correct = namespace(value=0) %}
+                        {% set total_answers = namespace(value=0) %}
+                        {% for response in activity.responses %}
+                            {% if response.score is defined %}
+                                {% set total_correct.value = total_correct.value + response.score %}
+                                {% set total_answers.value = total_answers.value + response.total %}
+                            {% endif %}
+                        {% endfor %}
+                        <p><strong>Average Score:</strong> 
+                            {{ (total_correct.value / total_answers.value * 100)|round if total_answers.value > 0 else 0 }}%
+                            ({{ total_correct.value }} / {{ total_answers.value }} correct)
+                        </p>
+                    </div>
+                    
+                    {% else %}
+                    <!-- Single Question Poll Results -->
                     {% for option in activity.content.options %}
                     {% set option_count = namespace(value=0) %}
                     {% for response in activity.responses %}
@@ -102,6 +209,7 @@
                         </div>
                     </div>
                     {% endfor %}
+                    {% endif %}
                 </div>
                 {% endif %}
                 

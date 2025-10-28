@@ -351,6 +351,8 @@ function displayAIPreview(content) {
 async function confirmAIActivity() {
     if (!aiGeneratedData) return;
     
+    console.log('AI Generated Data:', aiGeneratedData);  // Debug log
+    
     // Handle different activity formats
     let data = {
         course_id: aiGeneratedData.course_id,
@@ -361,19 +363,24 @@ async function confirmAIActivity() {
     
     // Handle poll with multiple questions
     if (aiGeneratedData.activity_type === 'poll' && aiGeneratedData.questions) {
+        console.log('Sending multi-question poll with', aiGeneratedData.questions.length, 'questions');
         data.poll_questions = aiGeneratedData.questions;  // Store all questions with correct answers
     } else if (aiGeneratedData.questions) {
         // Short answer format
+        console.log('Sending short answer');
         data.question = aiGeneratedData.questions[0].question;
         data.word_limit = aiGeneratedData.questions[0].word_limit;
         data.key_points = aiGeneratedData.questions[0].key_points;
     } else {
         // Legacy format or word cloud
+        console.log('Sending legacy format');
         data.question = aiGeneratedData.question;
         data.options = aiGeneratedData.options;
         data.word_limit = 200;
         data.instructions = aiGeneratedData.instructions;
     }
+    
+    console.log('Data being sent:', data);  // Debug log
     
     showLoading();
     
