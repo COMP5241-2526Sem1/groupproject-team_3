@@ -15,6 +15,21 @@
             </div>
             
             <div class="card-body">
+                <!-- Debug Info -->
+                <div style="background: #fef3c7; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; font-family: monospace; font-size: 0.875rem;">
+                    <strong>🔍 Debug Info:</strong><br>
+                    Activity Type: {{ activity.type }}<br>
+                    Has questions: {{ 'questions' in activity.content }}<br>
+                    {% if 'questions' in activity.content %}
+                    Number of questions: {{ activity.content.questions|length }}<br>
+                    First question: {{ activity.content.questions[0].question if activity.content.questions|length > 0 else 'N/A' }}<br>
+                    {% endif %}
+                    Has question (singular): {{ 'question' in activity.content }}<br>
+                    {% if 'question' in activity.content %}
+                    Question: {{ activity.content.question }}<br>
+                    {% endif %}
+                </div>
+                
                 {% if activity.type == 'poll' and activity.content.questions %}
                 <!-- Multi-Question Poll -->
                 <div class="alert alert-info mb-4">

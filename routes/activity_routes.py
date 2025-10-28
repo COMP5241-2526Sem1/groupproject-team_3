@@ -334,6 +334,16 @@ def student_activity(link):
         
         activity['_id'] = str(activity['_id'])
         
+        # Debug logging
+        logger.info(f"Student accessing activity: {activity.get('title')}")
+        logger.info(f"Activity type: {activity.get('type')}")
+        logger.info(f"Content keys: {activity.get('content', {}).keys()}")
+        if activity.get('type') == 'poll':
+            has_questions = 'questions' in activity.get('content', {})
+            logger.info(f"Has 'questions' field: {has_questions}")
+            if has_questions:
+                logger.info(f"Number of questions: {len(activity['content']['questions'])}")
+        
         # Get course info
         course = Course.find_by_id(activity['course_id'])
         
