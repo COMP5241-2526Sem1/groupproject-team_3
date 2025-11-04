@@ -36,7 +36,26 @@
                 </div>
                 <div class="card-body">
                     {% if activity.type == 'poll' %}
+                        {% if student_response.answers %}
+                        <!-- Multi-question poll response -->
+                        <p><strong>Your Score:</strong> {{ student_response.score }}/{{ student_response.total }} ({{ student_response.percentage }}%)</p>
+                        <div style="margin-top: 1rem;">
+                            {% for result in student_response.answers %}
+                            <div style="background: {{ '#dcfce7' if result.is_correct else '#fee2e2' }}; 
+                                        padding: 1rem; margin: 0.5rem 0; border-radius: 8px;">
+                                <p><strong>{{ '✅' if result.is_correct else '❌' }} Question {{ result.question_index + 1 }}</strong></p>
+                                <p>Your answer: <strong>{{ result.student_answer }}</strong></p>
+                                <p>Correct answer: <strong>{{ result.correct_answer }}</strong></p>
+                                <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                                    {{ result.explanation }}
+                                </p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <!-- Single question poll response -->
                         <p><strong>Selected:</strong> {{ student_response.selected_options|join(', ') }}</p>
+                        {% endif %}
                     {% elif activity.type == 'short_answer' %}
                         <p><strong>Your Answer:</strong></p>
                         <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem;">
@@ -283,14 +302,14 @@ function displayEvaluation(evaluation) {
             </div>
             <h2>Quiz Complete!</h2>
             <p style="font-size: 1.5rem; margin: 1rem 0;">
-                Score: <strong>${evaluation.correct}/${evaluation.total}</strong> 
+                Score: <strong>${evaluation.score}/${evaluation.total}</strong> 
                 (${evaluation.percentage}%)
             </p>
             
             <div style="text-align: left; margin: 2rem auto; max-width: 600px;">
                 <h3>Results:</h3>`;
     
-    evaluation.results.forEach((result, i) => {
+    evaluation.answers.forEach((result, i) => {
         const icon = result.is_correct ? '✅' : '❌';
         html += `
             <div style="background: ${result.is_correct ? '#dcfce7' : '#fee2e2'}; 
