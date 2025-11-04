@@ -19,16 +19,32 @@
                 <div style="background: #fef3c7; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; font-family: monospace; font-size: 0.875rem;">
                     <strong>🔍 Debug Info:</strong><br>
                     Activity Type: {{ activity.type }}<br>
+                    Activity Type == 'poll': {{ activity.type == 'poll' }}<br>
                     Has questions: {{ 'questions' in activity.content }}<br>
                     {% if 'questions' in activity.content %}
                     Questions is list: {{ activity.content.questions is iterable }}<br>
+                    Questions type: {{ activity.content.questions.__class__.__name__ }}<br>
                     Number of questions: {{ activity.content.questions|length }}<br>
-                    First question: {{ activity.content.questions[0].question if activity.content.questions|length > 0 else 'N/A' }}<br>
+                    Length > 0: {{ activity.content.questions|length > 0 }}<br>
+                    <strong>Condition Result: {{ activity.type == 'poll' and 'questions' in activity.content and activity.content.questions|length > 0 }}</strong><br>
+                    First question text: {{ activity.content.questions[0].question if activity.content.questions|length > 0 else 'N/A' }}<br>
+                    First question keys: {{ activity.content.questions[0].keys() if activity.content.questions|length > 0 else 'N/A' }}<br>
                     {% endif %}
                     Has question (singular): {{ 'question' in activity.content }}<br>
                     {% if 'question' in activity.content %}
                     Question: {{ activity.content.question }}<br>
                     {% endif %}
+                    <strong style="color: red;">Which branch? 
+                    {% if activity.type == 'poll' and 'questions' in activity.content and activity.content.questions|length > 0 %}
+                    MULTI-QUESTION POLL
+                    {% elif activity.type == 'poll' and activity.content.question %}
+                    SINGLE-QUESTION POLL
+                    {% elif activity.type == 'poll' %}
+                    ERROR: POLL WITH NO QUESTIONS
+                    {% else %}
+                    OTHER ACTIVITY TYPE
+                    {% endif %}
+                    </strong>
                 </div>
                 
                 {% if activity.type == 'poll' and 'questions' in activity.content and activity.content.questions|length > 0 %}
@@ -59,9 +75,9 @@
                         <div style="margin-bottom: 0.75rem;">
                             <label style="display: flex; align-items: center; cursor: pointer;">
                                 <input type="radio" 
-                                       name="answer_{{ loop.index0 }}" 
+                                       name="answer_{{ loop.parent.loop.index0 }}" 
                                        value="{{ option.label }}" 
-                                       data-question-index="{{ loop.index0 }}"
+                                       data-question-index="{{ loop.parent.loop.index0 }}"
                                        style="margin-right: 0.5rem;"
                                        required>
                                 <span><strong>{{ option.label }}.</strong> {{ option.text }}</span>
