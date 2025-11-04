@@ -76,9 +76,8 @@
                     </button>
                 </form>
                 
-                {% else %}
-                <!-- Original Single Question Format -->
-                {% if activity.content.question %}
+                {% elif activity.type == 'poll' and activity.content.question %}
+                <!-- Single Question Poll Format -->
                 <div class="alert alert-info mb-4">
                     <p style="margin: 0;"><strong>Question:</strong> {{ activity.content.question }}</p>
                 </div>
@@ -96,21 +95,8 @@
                         <input type="text" name="student_name" class="form-control" 
                                placeholder="Enter your name">
                     </div>
-                {% else %}
-                <!-- Error: No question data found -->
-                <div class="alert alert-danger">
-                    <h3>⚠️ Error: Activity has no questions</h3>
-                    <p>This activity appears to be missing question data. Please contact your teacher.</p>
-                    <p style="font-size: 0.875rem; margin-top: 1rem; font-family: monospace;">
-                        Debug: activity.type={{ activity.type }}, 
-                        has_questions={{ 'questions' in activity.content }},
-                        has_question={{ 'question' in activity.content }}
-                    </p>
-                </div>
-                {% endif %}
                     
                     <!-- Poll Response -->
-                    {% if activity.type == 'poll' %}
                     <div class="form-group">
                         <label class="form-label">Select your answer: *</label>
                         {% for option in activity.content.options %}
@@ -125,7 +111,26 @@
                         </div>
                         {% endfor %}
                     </div>
-                    {% endif %}
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                        Submit Answer
+                    </button>
+                </form>
+                
+                {% elif activity.type == 'poll' %}
+                <!-- Error: Poll activity has no questions -->
+                <div class="alert alert-danger">
+                    <h3>⚠️ Error: Poll activity has no questions</h3>
+                    <p>This poll appears to be missing question data. Please contact your teacher.</p>
+                    <p style="font-size: 0.875rem; margin-top: 1rem; font-family: monospace;">
+                        Debug: activity.type={{ activity.type }}, 
+                        has_questions={{ 'questions' in activity.content }},
+                        has_question={{ 'question' in activity.content }}
+                    </p>
+                </div>
+                
+                {% else %}
+                <!-- Other Activity Types (Short Answer, Essay, File Upload) -->
                     
                     <!-- Short Answer Response -->
                     {% if activity.type == 'short_answer' %}
