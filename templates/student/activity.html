@@ -62,15 +62,16 @@
                 {% if activity.type == 'poll' and 'questions' in activity.content and activity.content.questions|length > 0 %}
                 <!-- Multi-Question Poll -->
                 {% for question in activity.content.questions %}
+                {% set question_index = loop.index0 %}
                 <div class="form-group" style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
                     <label class="form-label"><strong>Question {{ loop.index }}:</strong> {{ question.question }}</label>
                     {% for option in question.options %}
                     <div style="margin-bottom: 0.75rem;">
                         <label style="display: flex; align-items: center; cursor: pointer;">
                             <input type="radio" 
-                                   name="answer_{{ loop.parent.loop.index0 }}" 
+                                   name="answer_{{ question_index }}" 
                                    value="{{ option.label }}" 
-                                   data-question-index="{{ loop.parent.loop.index0 }}"
+                                   data-question-index="{{ question_index }}"
                                    style="margin-right: 0.5rem;"
                                    required>
                             <span><strong>{{ option.label }}.</strong> {{ option.text }}</span>
