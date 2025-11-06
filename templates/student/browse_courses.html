@@ -39,7 +39,7 @@
                     </div>
                 </div>
                 
-                <button onclick="enrollCourse('{{ course._id }}')" 
+                <button onclick="enrollCourse('{{ course._id }}', this)" 
                         class="btn btn-success btn-block">
                     ✓ Enroll Now
                 </button>
@@ -123,7 +123,7 @@
 </style>
 
 <script>
-async function enrollCourse(courseId) {
+async function enrollCourse(courseId, buttonElement) {
     if (!confirm('Do you want to enroll in this course?')) return;
     
     showLoading();
@@ -142,7 +142,7 @@ async function enrollCourse(courseId) {
             showAlert('Successfully enrolled in course!', 'success');
             
             // Find and remove the enrolled course card
-            const courseCard = event.target.closest('.browse-course-card');
+            const courseCard = buttonElement.closest('.browse-course-card');
             if (courseCard) {
                 courseCard.style.transition = 'all 0.3s ease-out';
                 courseCard.style.opacity = '0';
