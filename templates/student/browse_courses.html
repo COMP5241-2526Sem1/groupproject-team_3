@@ -139,14 +139,46 @@ async function enrollCourse(courseId) {
         hideLoading();
         
         if (data.success) {
-            showSuccess('Successfully enrolled in course!');
-            setTimeout(() => location.reload(), 1000);
+            showAlert('Successfully enrolled in course!', 'success');
+            
+            // Find and remove the enrolled course card
+            const courseCard = event.target.closest('.browse-course-card');
+            if (courseCard) {
+                courseCard.style.transition = 'all 0.3s ease-out';
+                courseCard.style.opacity = '0';
+                courseCard.style.transform = 'scale(0.9)';
+                
+                setTimeout(() => {
+                    courseCard.remove();
+                    
+                    // Check if there are any remaining courses
+                    const remainingCourses = document.querySelectorAll('.browse-course-card');
+                    if (remainingCourses.length === 0) {
+                        // Show "all enrolled" message
+                        const container = document.querySelector('.grid');
+                        if (container) {
+                            container.parentElement.innerHTML = `
+                                <div class="card">
+                                    <div class="card-body text-center empty-state">
+                                        <div class="empty-icon">✅</div>
+                                        <h2>All Courses Enrolled!</h2>
+                                        <p>You're enrolled in all available courses.</p>
+                                        <a href="{{ url_for('student.my_courses') }}" class="btn btn-primary">
+                                            View My Courses
+                                        </a>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                }, 300);
+            }
         } else {
-            showError(data.message || 'Failed to enroll');
+            showAlert(data.message || 'Failed to enroll', 'danger');
         }
     } catch (error) {
         hideLoading();
-        showError('An error occurred');
+        showAlert('An error occurred', 'danger');
     }
 }
 </script>
