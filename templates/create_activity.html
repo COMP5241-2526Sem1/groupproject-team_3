@@ -147,6 +147,16 @@
                         </select>
                     </div>
                     
+                    <!-- Number of Questions (for Poll only) -->
+                    <div class="form-group" id="numQuestionsGroup" style="display: none;">
+                        <label class="form-label">Number of Questions *</label>
+                        <input type="number" name="num_questions" class="form-control" 
+                               value="1" min="1" max="10">
+                        <small style="color: #6b7280;">
+                            Generate 1-10 questions for this poll activity
+                        </small>
+                    </div>
+                    
                     <div class="form-group">
                         <label class="form-label">Teaching Content / Keywords *</label>
                         <textarea name="teaching_content" class="form-control" rows="5" required
@@ -282,11 +292,41 @@ document.getElementById('aiGenerateForm').addEventListener('submit', async (e) =
     }
 });
 
+// Show/hide num_questions based on activity type
+document.querySelector('#aiGenerateForm select[name="type"]').addEventListener('change', function(e) {
+    const numQuestionsGroup = document.getElementById('numQuestionsGroup');
+    if (e.target.value === 'poll') {
+        numQuestionsGroup.style.display = 'block';
+    } else {
+        numQuestionsGroup.style.display = 'none';
+    }
+});
+
 function displayAIPreview(content) {
     const preview = document.getElementById('aiContent');
     let html = `<h4>${content.title || 'Generated Activity'}</h4>`;
     
-    if (content.questions) {
+    if (content.activity_type === 'poll' && content.questions) {
+        // Multi-question poll format
+        content.questions.forEach((q, i) => {
+            html += `<div style="margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 4px;">
+                <p><strong>Question ${i + 1}:</strong> ${q.question}</p>
+                <ul style="list-style: none; padding-left: 0;">`;
+            q.options.forEach(opt => {
+                const icon = opt.label === q.correct_answer ? '✅' : '⚪';
+                html += `<li style="margin: 0.5rem 0;">${icon} <strong>${opt.label}.</strong> ${opt.text}</li>`;
+            });
+            html += `</ul>
+                <p style="font-size: 0.875rem; color: #059669; margin-top: 0.5rem;">
+                    <strong>Correct Answer:</strong> ${q.correct_answer}
+                </p>
+                <p style="font-size: 0.875rem; color: #6b7280;">
+                    ${q.explanation}
+                </p>
+            </div>`;
+        });
+    } else if (content.questions) {
+        // Short answer format
         content.questions.forEach((q, i) => {
             html += `<div style="margin-bottom: 1rem;">
                 <p><strong>Question ${i + 1}:</strong> ${q.question}</p>
@@ -296,6 +336,7 @@ function displayAIPreview(content) {
             </div>`;
         });
     } else if (content.question) {
+        // Legacy single question format or word cloud
         html += `<p><strong>Question:</strong> ${content.question}</p>`;
         if (content.options) {
             html += `<p><strong>Options:</strong></p><ul>`;
@@ -310,15 +351,36 @@ function displayAIPreview(content) {
 async function confirmAIActivity() {
     if (!aiGeneratedData) return;
     
-    const data = {
+    console.log('AI Generated Data:', aiGeneratedData);  // Debug log
+    
+    // Handle different activity formats
+    let data = {
         course_id: aiGeneratedData.course_id,
         type: aiGeneratedData.activity_type,
-        title: aiGeneratedData.title || aiGeneratedData.questions[0].question.substring(0, 50),
-        question: aiGeneratedData.question || aiGeneratedData.questions[0].question,
-        options: aiGeneratedData.options,
-        word_limit: aiGeneratedData.questions ? aiGeneratedData.questions[0].word_limit : 200,
-        instructions: aiGeneratedData.instructions
+        title: aiGeneratedData.title || 'AI Generated Activity',
+        ai_generated: true
     };
+    
+    // Handle poll with multiple questions
+    if (aiGeneratedData.activity_type === 'poll' && aiGeneratedData.questions) {
+        console.log('Sending multi-question poll with', aiGeneratedData.questions.length, 'questions');
+        data.poll_questions = aiGeneratedData.questions;  // Store all questions with correct answers
+    } else if (aiGeneratedData.questions) {
+        // Short answer format
+        console.log('Sending short answer');
+        data.question = aiGeneratedData.questions[0].question;
+        data.word_limit = aiGeneratedData.questions[0].word_limit;
+        data.key_points = aiGeneratedData.questions[0].key_points;
+    } else {
+        // Legacy format or word cloud
+        console.log('Sending legacy format');
+        data.question = aiGeneratedData.question;
+        data.options = aiGeneratedData.options;
+        data.word_limit = 200;
+        data.instructions = aiGeneratedData.instructions;
+    }
+    
+    console.log('Data being sent:', data);  // Debug log
     
     showLoading();
     

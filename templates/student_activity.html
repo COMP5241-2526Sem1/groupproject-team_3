@@ -15,6 +15,86 @@
             </div>
             
             <div class="card-body">
+                <!-- Debug Info -->
+                <div style="background: #fef3c7; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; font-family: monospace; font-size: 0.875rem;">
+                    <strong>🔍 Debug Info:</strong><br>
+                    Activity Type: {{ activity.type }}<br>
+                    Activity Type == 'poll': {{ activity.type == 'poll' }}<br>
+                    Has questions: {{ 'questions' in activity.content }}<br>
+                    {% if 'questions' in activity.content %}
+                    Questions is list: {{ activity.content.questions is iterable }}<br>
+                    Questions type: {{ activity.content.questions.__class__.__name__ }}<br>
+                    Number of questions: {{ activity.content.questions|length }}<br>
+                    Length > 0: {{ activity.content.questions|length > 0 }}<br>
+                    <strong>Condition Result: {{ activity.type == 'poll' and 'questions' in activity.content and activity.content.questions|length > 0 }}</strong><br>
+                    First question text: {{ activity.content.questions[0].question if activity.content.questions|length > 0 else 'N/A' }}<br>
+                    First question keys: {{ activity.content.questions[0].keys() if activity.content.questions|length > 0 else 'N/A' }}<br>
+                    {% endif %}
+                    Has question (singular): {{ 'question' in activity.content }}<br>
+                    {% if 'question' in activity.content %}
+                    Question: {{ activity.content.question }}<br>
+                    {% endif %}
+                    <strong style="color: red;">Which branch? 
+                    {% if activity.type == 'poll' and 'questions' in activity.content and activity.content.questions|length > 0 %}
+                    MULTI-QUESTION POLL
+                    {% elif activity.type == 'poll' and activity.content.question %}
+                    SINGLE-QUESTION POLL
+                    {% elif activity.type == 'poll' %}
+                    ERROR: POLL WITH NO QUESTIONS
+                    {% else %}
+                    OTHER ACTIVITY TYPE
+                    {% endif %}
+                    </strong>
+                </div>
+                
+                {% if activity.type == 'poll' and 'questions' in activity.content and activity.content.questions|length > 0 %}
+                <!-- Multi-Question Poll -->
+                <div class="alert alert-info mb-4">
+                    <p style="margin: 0;"><strong>Instructions:</strong> Answer all {{ activity.content.questions|length }} questions below.</p>
+                </div>
+                
+                <form id="responseForm">
+                    <!-- Student Info (Optional) -->
+                    <div class="form-group">
+                        <label class="form-label">Student ID (Optional)</label>
+                        <input type="text" name="student_id" class="form-control" 
+                               placeholder="Enter your student ID">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Name (Optional)</label>
+                        <input type="text" name="student_name" class="form-control" 
+                               placeholder="Enter your name">
+                    </div>
+                    
+                    <!-- Multi-Question Poll -->
+                    {% for question in activity.content.questions %}
+                    {% set question_index = loop.index0 %}
+                    <div class="form-group" style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <label class="form-label"><strong>Question {{ loop.index }}:</strong> {{ question.question }}</label>
+                        {% for option in question.options %}
+                        <div style="margin-bottom: 0.75rem;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" 
+                                       name="answer_{{ question_index }}" 
+                                       value="{{ option.label }}" 
+                                       data-question-index="{{ question_index }}"
+                                       style="margin-right: 0.5rem;"
+                                       required>
+                                <span><strong>{{ option.label }}.</strong> {{ option.text }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 2rem;">
+                        Submit All Answers
+                    </button>
+                </form>
+                
+                {% elif activity.type == 'poll' and activity.content.question %}
+                <!-- Single Question Poll Format -->
                 <div class="alert alert-info mb-4">
                     <p style="margin: 0;"><strong>Question:</strong> {{ activity.content.question }}</p>
                 </div>
@@ -34,7 +114,6 @@
                     </div>
                     
                     <!-- Poll Response -->
-                    {% if activity.type == 'poll' %}
                     <div class="form-group">
                         <label class="form-label">Select your answer: *</label>
                         {% for option in activity.content.options %}
@@ -49,7 +128,26 @@
                         </div>
                         {% endfor %}
                     </div>
-                    {% endif %}
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                        Submit Answer
+                    </button>
+                </form>
+                
+                {% elif activity.type == 'poll' %}
+                <!-- Error: Poll activity has no questions -->
+                <div class="alert alert-danger">
+                    <h3>⚠️ Error: Poll activity has no questions</h3>
+                    <p>This poll appears to be missing question data. Please contact your teacher.</p>
+                    <p style="font-size: 0.875rem; margin-top: 1rem; font-family: monospace;">
+                        Debug: activity.type={{ activity.type }}, 
+                        has_questions={{ 'questions' in activity.content }},
+                        has_question={{ 'question' in activity.content }}
+                    </p>
+                </div>
+                
+                {% else %}
+                <!-- Other Activity Types (Short Answer, Essay, File Upload) -->
                     
                     <!-- Short Answer Response -->
                     {% if activity.type == 'short_answer' %}
@@ -82,6 +180,7 @@
                         Submit Response
                     </button>
                 </form>
+                {% endif %}
                 
                 <!-- Success Message -->
                 <div id="successMessage" style="display: none; text-align: center; padding: 3rem;">
@@ -150,7 +249,28 @@
         const formData = new FormData(e.target);
         const data = {};
         
-        // Convert form data
+        {% if activity.type == 'poll' and activity.content.questions %}
+        // Multi-question poll - collect all answers
+        data.student_id = formData.get('student_id') || 'Anonymous';
+        data.student_name = formData.get('student_name') || 'Anonymous';
+        data.answers = {};
+        
+        // Collect answers for each question
+        {% for question in activity.content.questions %}
+        const answer_{{ loop.index0 }} = formData.get('answer_{{ loop.index0 }}');
+        if (answer_{{ loop.index0 }}) {
+            data.answers['{{ loop.index0 }}'] = answer_{{ loop.index0 }};
+        }
+        {% endfor %}
+        
+        // Check if all questions are answered
+        if (Object.keys(data.answers).length < {{ activity.content.questions|length }}) {
+            showAlert('Please answer all questions', 'danger');
+            return;
+        }
+        
+        {% else %}
+        // Original format - Convert form data
         for (let [key, value] of formData.entries()) {
             if (key === 'selected_options') {
                 if (!data.selected_options) data.selected_options = [];
@@ -168,6 +288,7 @@
             return;
         }
         {% endif %}
+        {% endif %}
         
         showLoading();
         
@@ -181,8 +302,13 @@
             hideLoading();
             
             if (result.success) {
-                document.getElementById('responseForm').style.display = 'none';
-                document.getElementById('successMessage').style.display = 'block';
+                // Check if we have evaluation results
+                if (result.evaluation) {
+                    displayEvaluation(result.evaluation);
+                } else {
+                    document.getElementById('responseForm').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                }
             } else {
                 showAlert(result.message, 'danger');
             }
@@ -191,6 +317,65 @@
             showAlert('Failed to submit response. Please try again.', 'danger');
         }
     });
+    
+    function displayEvaluation(evaluation) {
+        // Hide form and show results
+        document.getElementById('responseForm').style.display = 'none';
+        
+        let html = `
+            <div style="text-align: center; padding: 2rem;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">
+                    ${evaluation.percentage >= 70 ? '🎉' : evaluation.percentage >= 50 ? '👍' : '📚'}
+                </div>
+                <h2>Quiz Results</h2>
+                <div style="font-size: 2rem; font-weight: bold; color: ${evaluation.percentage >= 70 ? '#059669' : '#f59e0b'}; margin: 1rem 0;">
+                    ${evaluation.score} / ${evaluation.total}
+                </div>
+                <p style="font-size: 1.25rem; color: #6b7280;">
+                    Score: ${evaluation.percentage}%
+                </p>
+            </div>
+            
+            <div style="text-align: left; margin-top: 2rem;">
+                <h3 style="margin-bottom: 1rem;">Detailed Results:</h3>
+        `;
+        
+        evaluation.answers.forEach((answer, index) => {
+            const icon = answer.is_correct ? '✅' : '❌';
+            const color = answer.is_correct ? '#059669' : '#dc2626';
+            
+            html += `
+                <div style="background: ${answer.is_correct ? '#f0fdf4' : '#fef2f2'}; 
+                            border-left: 4px solid ${color}; 
+                            padding: 1rem; 
+                            margin-bottom: 1rem; 
+                            border-radius: 4px;">
+                    <p style="margin: 0 0 0.5rem 0;"><strong>Question ${index + 1}</strong> ${icon}</p>
+                    <p style="margin: 0.5rem 0; color: #6b7280;">
+                        Your answer: <strong>${answer.student_answer}</strong>
+                    </p>
+                    ${!answer.is_correct ? `
+                        <p style="margin: 0.5rem 0; color: ${color};">
+                            Correct answer: <strong>${answer.correct_answer}</strong>
+                        </p>
+                    ` : ''}
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: #6b7280;">
+                        ${answer.explanation}
+                    </p>
+                </div>
+            `;
+        });
+        
+        html += `
+            </div>
+            <div style="text-align: center; margin-top: 2rem;">
+                <p style="color: #6b7280;">Thank you for completing this activity!</p>
+            </div>
+        `;
+        
+        document.getElementById('successMessage').innerHTML = html;
+        document.getElementById('successMessage').style.display = 'block';
+    }
     
     {% if activity.type == 'short_answer' %}
     // Word counter for short answer

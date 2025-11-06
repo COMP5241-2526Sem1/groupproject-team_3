@@ -11,9 +11,18 @@
 
     <div class="card">
         <div class="card-body">
+            {% if activity.type == 'poll' and 'questions' in activity.content and activity.content.questions|length > 0 %}
+            <!-- Multi-Question Poll Display -->
+            <div class="alert alert-info mb-4">
+                <p style="margin: 0;"><strong>Instructions:</strong> Answer all {{ activity.content.questions|length }} questions below.</p>
+            </div>
+            
+            {% elif activity.content.question %}
+            <!-- Single Question Display -->
             <div class="alert alert-info mb-4">
                 <p style="margin: 0;"><strong>Question:</strong> {{ activity.content.question }}</p>
             </div>
+            {% endif %}
 
             {% if has_responded %}
             <!-- Show student's response -->
@@ -27,7 +36,26 @@
                 </div>
                 <div class="card-body">
                     {% if activity.type == 'poll' %}
+                        {% if student_response.answers %}
+                        <!-- Multi-question poll response -->
+                        <p><strong>Your Score:</strong> {{ student_response.score }}/{{ student_response.total }} ({{ student_response.percentage }}%)</p>
+                        <div style="margin-top: 1rem;">
+                            {% for result in student_response.answers %}
+                            <div style="background: {{ '#dcfce7' if result.is_correct else '#fee2e2' }}; 
+                                        padding: 1rem; margin: 0.5rem 0; border-radius: 8px;">
+                                <p><strong>{{ '✅' if result.is_correct else '❌' }} Question {{ result.question_index + 1 }}</strong></p>
+                                <p>Your answer: <strong>{{ result.student_answer }}</strong></p>
+                                <p>Correct answer: <strong>{{ result.correct_answer }}</strong></p>
+                                <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                                    {{ result.explanation }}
+                                </p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <!-- Single question poll response -->
                         <p><strong>Selected:</strong> {{ student_response.selected_options|join(', ') }}</p>
+                        {% endif %}
                     {% elif activity.type == 'short_answer' %}
                         <p><strong>Your Answer:</strong></p>
                         <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem;">
@@ -50,7 +78,30 @@
             {% else %}
             <!-- Show response form -->
             <form id="responseForm">
-                {% if activity.type == 'poll' %}
+                {% if activity.type == 'poll' and 'questions' in activity.content and activity.content.questions|length > 0 %}
+                <!-- Multi-Question Poll -->
+                {% for question in activity.content.questions %}
+                {% set question_index = loop.index0 %}
+                <div class="form-group" style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <label class="form-label"><strong>Question {{ loop.index }}:</strong> {{ question.question }}</label>
+                    {% for option in question.options %}
+                    <div style="margin-bottom: 0.75rem;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" 
+                                   name="answer_{{ question_index }}" 
+                                   value="{{ option.label }}" 
+                                   data-question-index="{{ question_index }}"
+                                   style="margin-right: 0.5rem;"
+                                   required>
+                            <span><strong>{{ option.label }}.</strong> {{ option.text }}</span>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                
+                {% elif activity.type == 'poll' %}
+                <!-- Single Question Poll -->
                 <div class="form-group">
                     <label class="form-label">Select your answer: *</label>
                     {% for option in activity.content.options %}
@@ -173,7 +224,26 @@ document.getElementById('responseForm').addEventListener('submit', async (e) => 
         student_name: '{{ user.username }}'
     };
     
-    // Convert form data
+    {% if activity.type == 'poll' and activity.content.questions %}
+    // Multi-question poll - collect all answers
+    data.answers = {};
+    
+    // Collect answers for each question
+    {% for question in activity.content.questions %}
+    const answer_{{ loop.index0 }} = formData.get('answer_{{ loop.index0 }}');
+    if (answer_{{ loop.index0 }}) {
+        data.answers['{{ loop.index0 }}'] = answer_{{ loop.index0 }};
+    }
+    {% endfor %}
+    
+    // Check if all questions are answered
+    if (Object.keys(data.answers).length < {{ activity.content.questions|length }}) {
+        showAlert('Please answer all questions', 'danger');
+        return;
+    }
+    
+    {% else %}
+    // Single question or other formats - Convert form data
     for (let [key, value] of formData.entries()) {
         if (key === 'selected_options') {
             if (!data.selected_options) data.selected_options = [];
@@ -184,6 +254,7 @@ document.getElementById('responseForm').addEventListener('submit', async (e) => 
             data[key] = value;
         }
     }
+    {% endif %}
     
     {% if activity.type == 'word_cloud' %}
     if (!data.keywords || data.keywords.length === 0) {
@@ -204,8 +275,13 @@ document.getElementById('responseForm').addEventListener('submit', async (e) => 
         hideLoading();
         
         if (result.success) {
-            document.getElementById('responseForm').style.display = 'none';
-            document.getElementById('successMessage').style.display = 'block';
+            // Check if we have evaluation results (for multi-question polls)
+            if (result.evaluation) {
+                displayEvaluation(result.evaluation);
+            } else {
+                document.getElementById('responseForm').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'block';
+            }
         } else {
             showAlert(result.message, 'danger');
         }
@@ -214,6 +290,48 @@ document.getElementById('responseForm').addEventListener('submit', async (e) => 
         showAlert('Failed to submit response. Please try again.', 'danger');
     }
 });
+
+function displayEvaluation(evaluation) {
+    // Hide form and show results
+    document.getElementById('responseForm').style.display = 'none';
+    
+    let html = `
+        <div style="text-align: center; padding: 2rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">
+                ${evaluation.percentage >= 70 ? '🎉' : evaluation.percentage >= 50 ? '👍' : '📚'}
+            </div>
+            <h2>Quiz Complete!</h2>
+            <p style="font-size: 1.5rem; margin: 1rem 0;">
+                Score: <strong>${evaluation.score}/${evaluation.total}</strong> 
+                (${evaluation.percentage}%)
+            </p>
+            
+            <div style="text-align: left; margin: 2rem auto; max-width: 600px;">
+                <h3>Results:</h3>`;
+    
+    evaluation.answers.forEach((result, i) => {
+        const icon = result.is_correct ? '✅' : '❌';
+        html += `
+            <div style="background: ${result.is_correct ? '#dcfce7' : '#fee2e2'}; 
+                        padding: 1rem; margin: 0.5rem 0; border-radius: 8px;">
+                <p><strong>${icon} Question ${i + 1}</strong></p>
+                <p style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0;">
+                    ${result.explanation}
+                </p>
+            </div>`;
+    });
+    
+    html += `
+            </div>
+            <a href="{{ url_for('student.course_detail', course_id=course._id) }}" 
+               class="btn btn-primary" style="margin-top: 1rem;">
+                Back to Course
+            </a>
+        </div>
+    `;
+    
+    document.querySelector('.card-body').innerHTML = html;
+}
 
 {% if activity.type == 'short_answer' %}
 // Word counter for short answer

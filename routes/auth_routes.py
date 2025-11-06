@@ -41,6 +41,8 @@ def register():
         password = data.get('password')
         email = data.get('email').strip()
         institution = data.get('institution', '').strip()
+        role = data.get('role', 'student').strip()  # 获取用户选择的角色,默认为student
+        student_id = data.get('student_id', '').strip()  # 获取学生ID
         
         # Validate password length
         if len(password) < 6:
@@ -49,13 +51,22 @@ def register():
                 'message': 'Password must be at least 6 characters'
             }), 400
         
-        # Register user
+        # 验证角色有效性
+        if role not in ['student', 'teacher', 'admin']:
+            return jsonify({'success': False, 'message': 'Invalid role'}), 400
+        
+        # 如果是学生,验证student_id是否存在
+        if role == 'student' and not student_id:
+            return jsonify({'success': False, 'message': 'Student ID is required for student accounts'}), 400
+        
+        # Register user with selected role
         result = auth_service.register_user(
             username=username,
             password=password,
             email=email,
-            role='teacher',
-            institution=institution
+            role=role,  # 使用用户选择的角色
+            institution=institution,
+            student_id=student_id if role == 'student' else None  # 只有学生才有student_id
         )
         
         if result['success']:
