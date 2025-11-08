@@ -597,3 +597,60 @@ def delete_activity(activity_id):
             'success': False,
             'message': 'Failed to delete activity'
         }), 500
+
+@activity_bp.route('/activity/<activity_id>/feedback', methods=['POST'])
+@login_required
+def add_feedback(activity_id):
+    """
+    Add teacher feedback to student response
+    """
+    try:
+        activity = Activity.find_by_id(activity_id)
+        
+        if not activity:
+            return jsonify({
+                'success': False,
+                'message': 'Activity not found'
+            }), 404
+        
+        # Check ownership
+        if activity['teacher_id'] != session['user_id']:
+            return jsonify({
+                'success': False,
+                'message': 'Access denied'
+            }), 403
+        
+        data = request.get_json() if request.is_json else request.form
+        student_id = data.get('student_id', '').strip()
+        feedback = data.get('feedback', '').strip()
+        
+        if not student_id or not feedback:
+            return jsonify({
+                'success': False,
+                'message': 'Student ID and feedback are required'
+            }), 400
+        
+        # Find the response and update it with feedback
+        from datetime import datetime
+        success = Activity.add_feedback_to_response(activity_id, student_id, feedback)
+        
+        if success:
+            logger.info(f"Feedback added to response in activity {activity_id} for student {student_id}")
+            return jsonify({
+                'success': True,
+                'message': 'Feedback saved successfully'
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to save feedback. Student response not found.'
+            }), 400
+        
+    except Exception as e:
+        logger.error(f"Add feedback error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': 'Failed to save feedback'
+        }), 500

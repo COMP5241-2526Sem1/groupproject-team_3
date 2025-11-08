@@ -78,6 +78,23 @@
                     <p style="margin-top: 1rem; color: #6b7280;">
                         <small>Submitted at: {{ student_response.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if student_response.submitted_at else 'N/A' }}</small>
                     </p>
+                    
+                    <!-- Teacher Feedback Display -->
+                    {% if student_response.feedback %}
+                    <div style="margin-top: 1.5rem; padding: 1rem; background: #ecfdf5; border-left: 4px solid #10b981; border-radius: 0.5rem;">
+                        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: #059669;">
+                            📝 Teacher's Feedback
+                        </p>
+                        <p style="margin: 0; color: #374151;">
+                            {{ student_response.feedback }}
+                        </p>
+                        {% if student_response.feedback_at %}
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.75rem; color: #6b7280;">
+                            Feedback provided: {{ student_response.feedback_at.strftime('%Y-%m-%d %H:%M') }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 

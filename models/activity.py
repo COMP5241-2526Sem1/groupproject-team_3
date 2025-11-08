@@ -312,3 +312,48 @@ class Activity:
             Activity.COLLECTION_NAME,
             {'type': activity_type, 'active': True}
         )
+    
+    @staticmethod
+    def add_feedback_to_response(activity_id, student_identifier, feedback):
+        """
+        Add teacher feedback to a student's response
+        
+        Args:
+            activity_id (str): Activity ID
+            student_identifier (str): student_id or student_name to identify the response
+            feedback (str): Teacher's feedback text
+            
+        Returns:
+            bool: True if successful
+        """
+        # Find the activity and locate the response index
+        activity = Activity.find_by_id(activity_id)
+        if not activity:
+            return False
+        
+        responses = activity.get('responses', [])
+        response_index = None
+        
+        # Find the response by student_id or student_name
+        for i, response in enumerate(responses):
+            if (response.get('student_id') == student_identifier or 
+                response.get('student_name') == student_identifier):
+                response_index = i
+                break
+        
+        if response_index is None:
+            return False
+        
+        # Update the specific response with feedback
+        update_fields = {
+            f'responses.{response_index}.feedback': feedback,
+            f'responses.{response_index}.feedback_at': datetime.utcnow(),
+            'updated_at': datetime.utcnow()
+        }
+        
+        result = db_service.update_one(
+            Activity.COLLECTION_NAME,
+            {'_id': ObjectId(activity_id)},
+            {'$set': update_fields}
+        )
+        return result.modified_count > 0
