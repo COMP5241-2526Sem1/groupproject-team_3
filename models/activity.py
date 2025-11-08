@@ -174,6 +174,55 @@ class Activity:
         return result.modified_count > 0
     
     @staticmethod
+    def update_response(activity_id, student_identifier, response_data):
+        """
+        Update existing student response to activity
+        Allows students to modify their short answer or word cloud responses
+        
+        Args:
+            activity_id (str): Activity ID
+            student_identifier (str): student_id or student_name to identify the response
+            response_data (dict): Updated response data
+            
+        Returns:
+            bool: True if successful
+        """
+        response_data['submitted_at'] = datetime.utcnow()
+        
+        # Find the activity and locate the response index
+        activity = Activity.find_by_id(activity_id)
+        if not activity:
+            return False
+        
+        responses = activity.get('responses', [])
+        response_index = None
+        
+        # Find the response by student_id or student_name
+        for i, response in enumerate(responses):
+            if (response.get('student_id') == student_identifier or 
+                response.get('student_name') == student_identifier):
+                response_index = i
+                break
+        
+        if response_index is None:
+            # Response doesn't exist, add it instead
+            return Activity.add_response(activity_id, response_data)
+        
+        # Update the specific response
+        update_fields = {}
+        for key, value in response_data.items():
+            update_fields[f'responses.{response_index}.{key}'] = value
+        
+        update_fields['updated_at'] = datetime.utcnow()
+        
+        result = db_service.update_one(
+            Activity.COLLECTION_NAME,
+            {'_id': ObjectId(activity_id)},
+            {'$set': update_fields}
+        )
+        return result.modified_count > 0
+    
+    @staticmethod
     def get_responses(activity_id):
         """
         Get all responses for an activity

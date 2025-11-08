@@ -450,16 +450,26 @@ def submit_response(activity_id):
                     'message': 'Please enter at least one keyword'
                 }), 400
         
-        # Add response to activity
-        success = Activity.add_response(activity_id, response_data)
+        # Check if this is an update (for short_answer and word_cloud)
+        is_update = data.get('is_update', False)
+        student_identifier = response_data['student_id']
+        
+        # For short answer and word cloud, allow updates
+        if is_update and activity['type'] in [Activity.TYPE_SHORT_ANSWER, Activity.TYPE_WORD_CLOUD]:
+            success = Activity.update_response(activity_id, student_identifier, response_data)
+            action = 'updated'
+        else:
+            # Add new response (for poll, or first submission for short_answer/word_cloud)
+            success = Activity.add_response(activity_id, response_data)
+            action = 'submitted'
         
         if success:
-            logger.info(f"Response submitted to activity {activity_id}")
+            logger.info(f"Response {action} for activity {activity_id}")
             
             # Prepare result message
             result = {
                 'success': True,
-                'message': 'Response submitted successfully'
+                'message': f'Response {action} successfully'
             }
             
             # For multi-question polls, include evaluation results
