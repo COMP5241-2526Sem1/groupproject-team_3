@@ -281,21 +281,9 @@ def activity_detail(activity_id):
             participation_rate = round((response_count / enrolled_count) * 100)
         print(f"DEBUG: Participation rate: {participation_rate}%")
         
-        # Get grouped answers if short answer type
-        grouped_answers = None
-        if activity['type'] == Activity.TYPE_SHORT_ANSWER and responses:
-            print("DEBUG: Processing short answer grouping...")
-            # Check if already grouped
-            if 'grouped_answers' not in activity:
-                print("DEBUG: Calling AI to group answers...")
-                # Group answers using AI
-                grouped_answers = genai_service.group_answers(responses, activity['content']['question'])
-                # Save grouped answers
-                Activity.update_activity(activity_id, {'grouped_answers': grouped_answers})
-                print("DEBUG: Grouped answers saved")
-            else:
-                grouped_answers = activity['grouped_answers']
-                print("DEBUG: Using cached grouped answers")
+        # Don't auto-load grouped answers - let frontend handle display
+        # Just pass whether grouping is available
+        has_grouped_answers = activity.get('grouped_answers') is not None
         
         print("DEBUG: Rendering template...")
         return render_template(
@@ -305,7 +293,7 @@ def activity_detail(activity_id):
             response_count=response_count,
             enrolled_count=enrolled_count,
             participation_rate=participation_rate,
-            grouped_answers=grouped_answers
+            has_grouped_answers=has_grouped_answers
         )
         
     except Exception as e:

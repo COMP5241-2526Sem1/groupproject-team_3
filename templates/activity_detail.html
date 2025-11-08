@@ -216,103 +216,107 @@
                 <!-- Short Answer Responses -->
                 {% if activity.type == 'short_answer' %}
                 <div id="answersList">
-                    {% if grouped_answers %}
-                    <div class="alert alert-info mb-4">
-                        <strong>AI Analysis:</strong> {{ grouped_answers.overall_analysis }}
-                    </div>
-                    
-                    {% for group in grouped_answers.groups %}
-                    <div class="card mb-3" style="border-left: 4px solid var(--primary-color);">
-                        <h3>Group {{ group.group_id }}: {{ group.theme }}</h3>
-                        <p style="color: #6b7280;">
-                            Understanding Level: <strong>{{ group.understanding_level|upper }}</strong>
-                        </p>
+                    <!-- Grouped View (Hidden by default) -->
+                    <div id="groupedView" style="display: none;">
+                        {% if activity.grouped_answers %}
+                        <div class="alert alert-info mb-4">
+                            <strong>AI Analysis:</strong> {{ activity.grouped_answers.overall_analysis }}
+                        </div>
                         
-                        {% if group.key_points %}
-                        <p><strong>Key Points:</strong></p>
-                        <ul>
-                            {% for point in group.key_points %}
-                            <li>{{ point }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
-                        
-                        <p><strong>Student Responses:</strong></p>
-                        {% for answer in group.answers %}
-                        {# Find the matching response in activity.responses #}
-                        {% set student_response = namespace(found=None) %}
-                        {% for response in activity.responses %}
-                            {% if response.student_id == answer.student_id and response.text == answer.text %}
-                                {% set student_response.found = response %}
-                            {% endif %}
-                        {% endfor %}
-                        
-                        <div class="card" style="background-color: #f9fafb; margin-bottom: 0.5rem;" id="response-grouped-{{ loop.index0 }}">
-                            <p style="margin: 0;"><strong>{{ answer.student_id }}:</strong> {{ answer.text }}</p>
+                        {% for group in activity.grouped_answers.groups %}
+                        <div class="card mb-3" style="border-left: 4px solid var(--primary-color);">
+                            <h3>Group {{ group.group_id }}: {{ group.theme }}</h3>
+                            <p style="color: #6b7280;">
+                                Understanding Level: <strong>{{ group.understanding_level|upper }}</strong>
+                            </p>
                             
-                            <!-- Teacher Feedback Section for Grouped Answers -->
-                            {% if student_response.found %}
-                            <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
-                                {% if student_response.found.feedback %}
-                                <div id="feedback-display-g-{{ loop.index0 }}" style="background: #f0f9ff; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.5rem;">
-                                    <p style="margin: 0; font-size: 0.875rem; color: #0369a1;">
-                                        <strong>📝 Teacher Feedback:</strong>
-                                    </p>
-                                    <p style="margin: 0.5rem 0 0 0;">{{ student_response.found.feedback }}</p>
-                                    {% if student_response.found.feedback_at %}
-                                    <p style="margin: 0.5rem 0 0 0; font-size: 0.75rem; color: #6b7280;">
-                                        Updated: {{ student_response.found.feedback_at.strftime('%Y-%m-%d %H:%M') }}
-                                    </p>
-                                    {% endif %}
-                                </div>
-                                <button onclick="editFeedbackGrouped({{ loop.index0 }})" class="btn btn-sm" style="font-size: 0.875rem;">
-                                    ✏️ Edit Feedback
-                                </button>
-                                {% else %}
-                                <button onclick="addFeedbackGrouped({{ loop.index0 }})" class="btn btn-sm btn-primary" style="font-size: 0.875rem;">
-                                    💬 Add Feedback
-                                </button>
+                            {% if group.key_points %}
+                            <p><strong>Key Points:</strong></p>
+                            <ul>
+                                {% for point in group.key_points %}
+                                <li>{{ point }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                            
+                            <p><strong>Student Responses:</strong></p>
+                            {% for answer in group.answers %}
+                            {# Find the matching response in activity.responses #}
+                            {% set student_response = namespace(found=None) %}
+                            {% for response in activity.responses %}
+                                {% if response.student_id == answer.student_id and response.text == answer.text %}
+                                    {% set student_response.found = response %}
                                 {% endif %}
+                            {% endfor %}
+                            
+                            <div class="card" style="background-color: #f9fafb; margin-bottom: 0.5rem;" id="response-grouped-{{ loop.index0 }}">
+                                <p style="margin: 0;"><strong>{{ answer.student_id }}:</strong> {{ answer.text }}</p>
                                 
-                                <!-- Feedback Form (Hidden by default) -->
-                                <div id="feedback-form-g-{{ loop.index0 }}" style="display: none; margin-top: 0.75rem;">
-                                    <textarea id="feedback-text-g-{{ loop.index0 }}" 
-                                              class="form-control" 
-                                              rows="3" 
-                                              placeholder="Enter your feedback for this student..."
-                                              style="margin-bottom: 0.5rem;">{{ student_response.found.feedback or '' }}</textarea>
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <button onclick="saveFeedbackGrouped({{ loop.index0 }}, '{{ answer.student_id }}')" 
-                                                class="btn btn-sm btn-primary">
-                                            💾 Save
-                                        </button>
-                                        <button onclick="cancelFeedbackGrouped({{ loop.index0 }})" 
-                                                class="btn btn-sm">
-                                            Cancel
-                                        </button>
+                                <!-- Teacher Feedback Section for Grouped Answers -->
+                                {% if student_response.found %}
+                                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
+                                    {% if student_response.found.feedback %}
+                                    <div id="feedback-display-g-{{ loop.index0 }}" style="background: #f0f9ff; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                                        <p style="margin: 0; font-size: 0.875rem; color: #0369a1;">
+                                            <strong>📝 Teacher Feedback:</strong>
+                                        </p>
+                                        <p style="margin: 0.5rem 0 0 0;">{{ student_response.found.feedback }}</p>
+                                        {% if student_response.found.feedback_at %}
+                                        <p style="margin: 0.5rem 0 0 0; font-size: 0.75rem; color: #6b7280;">
+                                            Updated: {{ student_response.found.feedback_at.strftime('%Y-%m-%d %H:%M') }}
+                                        </p>
+                                        {% endif %}
+                                    </div>
+                                    <button onclick="editFeedbackGrouped({{ loop.index0 }})" class="btn btn-sm" style="font-size: 0.875rem;">
+                                        ✏️ Edit Feedback
+                                    </button>
+                                    {% else %}
+                                    <button onclick="addFeedbackGrouped({{ loop.index0 }})" class="btn btn-sm btn-primary" style="font-size: 0.875rem;">
+                                        💬 Add Feedback
+                                    </button>
+                                    {% endif %}
+                                    
+                                    <!-- Feedback Form (Hidden by default) -->
+                                    <div id="feedback-form-g-{{ loop.index0 }}" style="display: none; margin-top: 0.75rem;">
+                                        <textarea id="feedback-text-g-{{ loop.index0 }}" 
+                                                  class="form-control" 
+                                                  rows="3" 
+                                                  placeholder="Enter your feedback for this student..."
+                                                  style="margin-bottom: 0.5rem;">{{ student_response.found.feedback or '' }}</textarea>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button onclick="saveFeedbackGrouped({{ loop.index0 }}, '{{ answer.student_id }}')" 
+                                                    class="btn btn-sm btn-primary">
+                                                💾 Save
+                                            </button>
+                                            <button onclick="cancelFeedbackGrouped({{ loop.index0 }})" 
+                                                    class="btn btn-sm">
+                                                Cancel
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                                {% endif %}
                             </div>
-                            {% endif %}
+                            {% endfor %}
                         </div>
                         {% endfor %}
+                        
+                        {% if activity.grouped_answers.common_misconceptions %}
+                        <div class="alert alert-warning">
+                            <strong>Common Misconceptions:</strong>
+                            <ul>
+                                {% for misconception in activity.grouped_answers.common_misconceptions %}
+                                <li>{{ misconception }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        {% endif %}
                     </div>
-                    {% endfor %}
                     
-                    {% if grouped_answers.common_misconceptions %}
-                    <div class="alert alert-warning">
-                        <strong>Common Misconceptions:</strong>
-                        <ul>
-                            {% for misconception in grouped_answers.common_misconceptions %}
-                            <li>{{ misconception }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                    
-                    {% else %}
-                    <!-- Ungrouped answers -->
-                    {% for response in activity.responses %}
+                    <!-- Regular View (Default) -->
+                    <div id="regularView">
+                        {% for response in activity.responses %}
                     <div class="card mb-2" id="response-{{ loop.index0 }}">
                         <p><strong>{{ response.student_id or response.student_name or 'Anonymous' }}:</strong></p>
                         <p>{{ response.text or response.get('response_data', {}).get('text', 'No response text') }}</p>
@@ -364,7 +368,8 @@
                         </div>
                     </div>
                     {% endfor %}
-                    {% endif %}
+                    </div>
+                    <!-- End of Regular View -->
                 </div>
                 {% endif %}
                 
@@ -463,6 +468,15 @@
 <script>
 async function groupAnswers() {
     const btn = document.getElementById('groupBtn');
+    const originalText = btn.textContent;
+    
+    // Check if already grouped, just toggle view
+    {% if has_grouped_answers %}
+    toggleGroupedView();
+    return;
+    {% endif %}
+    
+    // Need to generate grouping
     btn.disabled = true;
     btn.textContent = '⏳ Analyzing with AI...';
     
@@ -478,12 +492,34 @@ async function groupAnswers() {
         } else {
             showAlert(result.message, 'danger');
             btn.disabled = false;
-            btn.textContent = '🤖 Group Answers with AI';
+            btn.textContent = originalText;
         }
     } catch (error) {
         showAlert('Failed to group answers', 'danger');
         btn.disabled = false;
+        btn.textContent = originalText;
+    }
+}
+
+function toggleGroupedView() {
+    const groupedView = document.getElementById('groupedView');
+    const regularView = document.getElementById('regularView');
+    const btn = document.getElementById('groupBtn');
+    
+    if (groupedView.style.display === 'none') {
+        // Show grouped view
+        groupedView.style.display = 'block';
+        regularView.style.display = 'none';
+        btn.textContent = '📋 Show All Responses';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn');
+    } else {
+        // Show regular view
+        groupedView.style.display = 'none';
+        regularView.style.display = 'block';
         btn.textContent = '🤖 Group Answers with AI';
+        btn.classList.remove('btn');
+        btn.classList.add('btn-primary');
     }
 }
 
