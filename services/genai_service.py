@@ -276,16 +276,41 @@ Return the analysis in JSON format:
             result = json.loads(content)
             
             # Add actual answer texts to groups
+            grouped_indices = set()
             for group in result.get('groups', []):
                 group['answers'] = [
                     {
                         'index': idx,
                         'text': answer_texts[idx],
-                        'student_id': answers[idx].get('student_id', 'Anonymous')
+                        'student_id': answers[idx].get('student_id', answers[idx].get('student_name', 'Anonymous'))
                     }
                     for idx in group['answer_indices']
                     if idx < len(answer_texts)
                 ]
+                # Track which answers have been grouped
+                for idx in group['answer_indices']:
+                    if idx < len(answer_texts):
+                        grouped_indices.add(idx)
+            
+            # Add ungrouped answers to a separate group
+            ungrouped_indices = [i for i in range(len(answer_texts)) if i not in grouped_indices]
+            if ungrouped_indices:
+                ungrouped_group = {
+                    'group_id': len(result.get('groups', [])) + 1,
+                    'theme': 'Other Responses',
+                    'answer_indices': ungrouped_indices,
+                    'key_points': ['Various responses not fitting main themes'],
+                    'understanding_level': 'varied',
+                    'answers': [
+                        {
+                            'index': idx,
+                            'text': answer_texts[idx],
+                            'student_id': answers[idx].get('student_id', answers[idx].get('student_name', 'Anonymous'))
+                        }
+                        for idx in ungrouped_indices
+                    ]
+                }
+                result['groups'].append(ungrouped_group)
             
             return result
             

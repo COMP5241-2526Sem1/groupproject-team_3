@@ -241,15 +241,16 @@
                             
                             <p><strong>Student Responses:</strong></p>
                             {% for answer in group.answers %}
-                            {# Find the matching response in activity.responses #}
+                            {# Find the matching response in activity.responses - match by student_id or student_name and text #}
                             {% set student_response = namespace(found=None) %}
                             {% for response in activity.responses %}
-                                {% if response.student_id == answer.student_id and response.text == answer.text %}
+                                {% set response_student = response.student_id or response.student_name or 'Anonymous' %}
+                                {% if (response_student == answer.student_id or response.student_name == answer.student_id) and response.text == answer.text %}
                                     {% set student_response.found = response %}
                                 {% endif %}
                             {% endfor %}
                             
-                            <div class="card" style="background-color: #f9fafb; margin-bottom: 0.5rem;" id="response-grouped-{{ loop.index0 }}">
+                            <div class="card" style="background-color: #f9fafb; margin-bottom: 0.5rem;" id="response-grouped-{{ loop.parent.loop.index0 }}-{{ loop.index0 }}">
                                 <p style="margin: 0;"><strong>{{ answer.student_id }}:</strong> {{ answer.text }}</p>
                                 
                                 <!-- Teacher Feedback Section for Grouped Answers -->
