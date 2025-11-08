@@ -462,7 +462,12 @@ function enableEdit(activityType) {
 
 // Submit edited response
 async function submitEdit(activityType) {
-    let response_data = {};
+    // Build data object with proper structure
+    const data = {
+        is_update: true,
+        student_id: '{{ user.student_id }}',
+        student_name: '{{ user.username }}'
+    };
     
     if (activityType === 'short_answer') {
         const text = document.getElementById('answerText').value.trim();
@@ -470,22 +475,15 @@ async function submitEdit(activityType) {
             alert('Please enter your answer');
             return;
         }
-        response_data = { text: text };
+        data.text = text;  // Add text directly to data object
         
     } else if (activityType === 'word_cloud') {
         if (keywords.length < 3 || keywords.length > 5) {
             alert('Please add 3-5 keywords');
             return;
         }
-        response_data = { keywords: keywords };
+        data.keywords = keywords;  // Add keywords directly to data object
     }
-    
-    // Add update flag and student identifier
-    const data = {
-        response: response_data,
-        is_update: true,
-        student_id: '{{ user.student_id }}'
-    };
     
     try {
         const response = await fetch('/activity/{{ activity._id }}/submit', {
