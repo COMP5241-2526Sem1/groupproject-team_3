@@ -241,11 +241,10 @@
                             
                             <p><strong>Student Responses:</strong></p>
                             {% for answer in group.answers %}
-                            {# Find the matching response in activity.responses - match by student_id or student_name and text #}
+                            {# Find the matching response in activity.responses by matching text #}
                             {% set student_response = namespace(found=None) %}
                             {% for response in activity.responses %}
-                                {% set response_student = response.student_id or response.student_name or 'Anonymous' %}
-                                {% if (response_student == answer.student_id or response.student_name == answer.student_id) and response.text == answer.text %}
+                                {% if response.text == answer.text %}
                                     {% set student_response.found = response %}
                                 {% endif %}
                             {% endfor %}
