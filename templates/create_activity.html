@@ -302,6 +302,8 @@ document.querySelector('#aiGenerateForm select[name="type"]').addEventListener('
     }
 });
 
+let selectedQuestionIndex = 0;  // Track selected question for short answer
+
 function displayAIPreview(content) {
     const preview = document.getElementById('aiContent');
     let html = `<h4>${content.title || 'Generated Activity'}</h4>`;
@@ -326,13 +328,35 @@ function displayAIPreview(content) {
             </div>`;
         });
     } else if (content.questions) {
-        // Short answer format
+        // Short answer format - with selection option
+        selectedQuestionIndex = 0;  // Reset to first question
+        html += `<p style="color: #059669; font-weight: 500; margin-bottom: 1rem;">
+            ✨ Select which question to use for your activity:
+        </p>`;
         content.questions.forEach((q, i) => {
-            html += `<div style="margin-bottom: 1rem;">
-                <p><strong>Question ${i + 1}:</strong> ${q.question}</p>
-                <p style="font-size: 0.875rem; color: #6b7280;">
-                    Word limit: ${q.word_limit} | Key points: ${q.key_points.join(', ')}
-                </p>
+            const isSelected = i === selectedQuestionIndex;
+            html += `<div id="question-${i}" onclick="selectQuestion(${i})" 
+                style="margin-bottom: 1rem; padding: 1rem; 
+                       background: ${isSelected ? '#d1fae5' : 'white'}; 
+                       border: 2px solid ${isSelected ? '#10b981' : '#e5e7eb'}; 
+                       border-radius: 8px; cursor: pointer; 
+                       transition: all 0.2s ease;">
+                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                    <input type="radio" name="selectedQuestion" value="${i}" 
+                           ${isSelected ? 'checked' : ''} 
+                           style="margin-top: 0.25rem; cursor: pointer;">
+                    <div style="flex: 1;">
+                        <p style="margin: 0; font-weight: 500;">
+                            <strong>Question ${i + 1}:</strong> ${q.question}
+                        </p>
+                        <p style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0 0 0;">
+                            📝 Word limit: ${q.word_limit} words
+                        </p>
+                        <p style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 0;">
+                            🎯 Key points: ${q.key_points.join(', ')}
+                        </p>
+                    </div>
+                </div>
             </div>`;
         });
     } else if (content.question) {
@@ -346,6 +370,25 @@ function displayAIPreview(content) {
     }
     
     preview.innerHTML = html;
+}
+
+function selectQuestion(index) {
+    selectedQuestionIndex = index;
+    
+    // Update visual selection
+    const questions = aiGeneratedData.questions;
+    questions.forEach((q, i) => {
+        const element = document.getElementById(`question-${i}`);
+        if (element) {
+            const isSelected = i === index;
+            element.style.background = isSelected ? '#d1fae5' : 'white';
+            element.style.borderColor = isSelected ? '#10b981' : '#e5e7eb';
+            
+            // Update radio button
+            const radio = element.querySelector('input[type="radio"]');
+            if (radio) radio.checked = isSelected;
+        }
+    });
 }
 
 async function confirmAIActivity() {
@@ -366,11 +409,12 @@ async function confirmAIActivity() {
         console.log('Sending multi-question poll with', aiGeneratedData.questions.length, 'questions');
         data.poll_questions = aiGeneratedData.questions;  // Store all questions with correct answers
     } else if (aiGeneratedData.questions) {
-        // Short answer format
-        console.log('Sending short answer');
-        data.question = aiGeneratedData.questions[0].question;
-        data.word_limit = aiGeneratedData.questions[0].word_limit;
-        data.key_points = aiGeneratedData.questions[0].key_points;
+        // Short answer format - use selected question
+        const selectedQuestion = aiGeneratedData.questions[selectedQuestionIndex];
+        console.log('Sending short answer - selected question', selectedQuestionIndex + 1);
+        data.question = selectedQuestion.question;
+        data.word_limit = selectedQuestion.word_limit;
+        data.key_points = selectedQuestion.key_points;
     } else {
         // Legacy format or word cloud
         console.log('Sending legacy format');
