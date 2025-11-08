@@ -239,8 +239,61 @@
                         
                         <p><strong>Student Responses:</strong></p>
                         {% for answer in group.answers %}
-                        <div class="card" style="background-color: #f9fafb; margin-bottom: 0.5rem;">
+                        {# Find the matching response in activity.responses #}
+                        {% set student_response = namespace(found=None) %}
+                        {% for response in activity.responses %}
+                            {% if response.student_id == answer.student_id and response.text == answer.text %}
+                                {% set student_response.found = response %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <div class="card" style="background-color: #f9fafb; margin-bottom: 0.5rem;" id="response-grouped-{{ loop.index0 }}">
                             <p style="margin: 0;"><strong>{{ answer.student_id }}:</strong> {{ answer.text }}</p>
+                            
+                            <!-- Teacher Feedback Section for Grouped Answers -->
+                            {% if student_response.found %}
+                            <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
+                                {% if student_response.found.feedback %}
+                                <div id="feedback-display-g-{{ loop.index0 }}" style="background: #f0f9ff; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                                    <p style="margin: 0; font-size: 0.875rem; color: #0369a1;">
+                                        <strong>📝 Teacher Feedback:</strong>
+                                    </p>
+                                    <p style="margin: 0.5rem 0 0 0;">{{ student_response.found.feedback }}</p>
+                                    {% if student_response.found.feedback_at %}
+                                    <p style="margin: 0.5rem 0 0 0; font-size: 0.75rem; color: #6b7280;">
+                                        Updated: {{ student_response.found.feedback_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <button onclick="editFeedbackGrouped({{ loop.index0 }})" class="btn btn-sm" style="font-size: 0.875rem;">
+                                    ✏️ Edit Feedback
+                                </button>
+                                {% else %}
+                                <button onclick="addFeedbackGrouped({{ loop.index0 }})" class="btn btn-sm btn-primary" style="font-size: 0.875rem;">
+                                    💬 Add Feedback
+                                </button>
+                                {% endif %}
+                                
+                                <!-- Feedback Form (Hidden by default) -->
+                                <div id="feedback-form-g-{{ loop.index0 }}" style="display: none; margin-top: 0.75rem;">
+                                    <textarea id="feedback-text-g-{{ loop.index0 }}" 
+                                              class="form-control" 
+                                              rows="3" 
+                                              placeholder="Enter your feedback for this student..."
+                                              style="margin-bottom: 0.5rem;">{{ student_response.found.feedback or '' }}</textarea>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button onclick="saveFeedbackGrouped({{ loop.index0 }}, '{{ answer.student_id }}')" 
+                                                class="btn btn-sm btn-primary">
+                                            💾 Save
+                                        </button>
+                                        <button onclick="cancelFeedbackGrouped({{ loop.index0 }})" 
+                                                class="btn btn-sm">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
@@ -497,6 +550,54 @@ function cancelFeedbackWC(index) {
 
 async function saveFeedbackWC(index, studentId) {
     const feedbackText = document.getElementById(`feedback-text-wc-${index}`).value.trim();
+    
+    if (!feedbackText) {
+        alert('Please enter feedback');
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const result = await apiCall(
+            '{{ url_for("activity.add_feedback", activity_id=activity._id) }}',
+            'POST',
+            {
+                student_id: studentId,
+                feedback: feedbackText
+            }
+        );
+        
+        hideLoading();
+        
+        if (result.success) {
+            showAlert('Feedback saved successfully!', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert(result.message || 'Failed to save feedback', 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        console.error('Error saving feedback:', error);
+        showAlert('Failed to save feedback', 'danger');
+    }
+}
+
+// Feedback functions for Grouped Answers
+function addFeedbackGrouped(index) {
+    document.getElementById(`feedback-form-g-${index}`).style.display = 'block';
+}
+
+function editFeedbackGrouped(index) {
+    document.getElementById(`feedback-form-g-${index}`).style.display = 'block';
+}
+
+function cancelFeedbackGrouped(index) {
+    document.getElementById(`feedback-form-g-${index}`).style.display = 'none';
+}
+
+async function saveFeedbackGrouped(index, studentId) {
+    const feedbackText = document.getElementById(`feedback-text-g-${index}`).value.trim();
     
     if (!feedbackText) {
         alert('Please enter feedback');
