@@ -98,9 +98,16 @@
         <div class="card-header flex-between">
             <h2>Responses</h2>
             {% if activity.type == 'short_answer' and response_count > 0 %}
-            <button onclick="groupAnswers()" class="btn btn-success" id="groupBtn">
-                🤖 Group Answers with AI
-            </button>
+            <div style="display: flex; gap: 0.5rem;">
+                {% if activity.grouped_answers %}
+                <button onclick="toggleGroupedView()" class="btn" id="toggleBtn">
+                    📋 Show All Responses
+                </button>
+                {% endif %}
+                <button onclick="groupAnswers()" class="btn btn-success" id="groupBtn">
+                    🔄 Re-Group with AI
+                </button>
+            </div>
             {% endif %}
         </div>
         
@@ -216,8 +223,8 @@
                 <!-- Short Answer Responses -->
                 {% if activity.type == 'short_answer' %}
                 <div id="answersList">
-                    <!-- Grouped View (Hidden by default) -->
-                    <div id="groupedView" style="display: none;">
+                    <!-- Grouped View (Show if grouped_answers exists) -->
+                    <div id="groupedView" style="display: {% if activity.grouped_answers %}block{% else %}none{% endif %};">
                         {% if activity.grouped_answers %}
                         <div class="alert alert-info mb-4">
                             <strong>AI Analysis:</strong> {{ activity.grouped_answers.overall_analysis }}
@@ -315,8 +322,8 @@
                         {% endif %}
                     </div>
                     
-                    <!-- Regular View (Default) -->
-                    <div id="regularView">
+                    <!-- Regular View (Hide if grouped_answers exists) -->
+                    <div id="regularView" style="display: {% if activity.grouped_answers %}none{% else %}block{% endif %};">
                         {% for response in activity.responses %}
                     <div class="card mb-2" id="response-{{ loop.index0 }}">
                         <p><strong>{{ response.student_id or response.student_name or 'Anonymous' }}:</strong></p>
@@ -471,13 +478,7 @@ async function groupAnswers() {
     const btn = document.getElementById('groupBtn');
     const originalText = btn.textContent;
     
-    // Check if already grouped, just toggle view
-    {% if has_grouped_answers %}
-    toggleGroupedView();
-    return;
-    {% endif %}
-    
-    // Need to generate grouping
+    // Always generate fresh grouping with AI
     btn.disabled = true;
     btn.textContent = '⏳ Analyzing with AI...';
     
@@ -505,22 +506,18 @@ async function groupAnswers() {
 function toggleGroupedView() {
     const groupedView = document.getElementById('groupedView');
     const regularView = document.getElementById('regularView');
-    const btn = document.getElementById('groupBtn');
+    const btn = document.getElementById('toggleBtn');
     
     if (groupedView.style.display === 'none') {
         // Show grouped view
         groupedView.style.display = 'block';
         regularView.style.display = 'none';
         btn.textContent = '📋 Show All Responses';
-        btn.classList.remove('btn-primary');
-        btn.classList.add('btn');
     } else {
         // Show regular view
         groupedView.style.display = 'none';
         regularView.style.display = 'block';
-        btn.textContent = '🤖 Group Answers with AI';
-        btn.classList.remove('btn');
-        btn.classList.add('btn-primary');
+        btn.textContent = '🤖 Show Grouped View';
     }
 }
 
