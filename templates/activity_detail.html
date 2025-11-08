@@ -250,14 +250,15 @@
                                 {% endif %}
                             {% endfor %}
                             
-                            <div class="card" style="background-color: #f9fafb; margin-bottom: 0.5rem;" id="response-grouped-{{ loop.parent.loop.index0 }}-{{ loop.index0 }}">
+                            {% set outer_index = loop.index0 %}
+                            <div class="card" style="background-color: #f9fafb; margin-bottom: 0.5rem;" id="response-grouped-g{{ group.group_id }}-{{ outer_index }}">
                                 <p style="margin: 0;"><strong>{{ answer.student_id }}:</strong> {{ answer.text }}</p>
                                 
                                 <!-- Teacher Feedback Section for Grouped Answers -->
                                 {% if student_response.found %}
                                 <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
                                     {% if student_response.found.feedback %}
-                                    <div id="feedback-display-g-{{ loop.index0 }}" style="background: #f0f9ff; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                                    <div id="feedback-display-g{{ group.group_id }}-{{ outer_index }}" style="background: #f0f9ff; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.5rem;">
                                         <p style="margin: 0; font-size: 0.875rem; color: #0369a1;">
                                             <strong>📝 Teacher Feedback:</strong>
                                         </p>
@@ -268,28 +269,28 @@
                                         </p>
                                         {% endif %}
                                     </div>
-                                    <button onclick="editFeedbackGrouped({{ loop.index0 }})" class="btn btn-sm" style="font-size: 0.875rem;">
+                                    <button onclick="editFeedbackGrouped('g{{ group.group_id }}-{{ outer_index }}')" class="btn btn-sm" style="font-size: 0.875rem;">
                                         ✏️ Edit Feedback
                                     </button>
                                     {% else %}
-                                    <button onclick="addFeedbackGrouped({{ loop.index0 }})" class="btn btn-sm btn-primary" style="font-size: 0.875rem;">
+                                    <button onclick="addFeedbackGrouped('g{{ group.group_id }}-{{ outer_index }}')" class="btn btn-sm btn-primary" style="font-size: 0.875rem;">
                                         💬 Add Feedback
                                     </button>
                                     {% endif %}
                                     
                                     <!-- Feedback Form (Hidden by default) -->
-                                    <div id="feedback-form-g-{{ loop.index0 }}" style="display: none; margin-top: 0.75rem;">
-                                        <textarea id="feedback-text-g-{{ loop.index0 }}" 
+                                    <div id="feedback-form-g{{ group.group_id }}-{{ outer_index }}" style="display: none; margin-top: 0.75rem;">
+                                        <textarea id="feedback-text-g{{ group.group_id }}-{{ outer_index }}" 
                                                   class="form-control" 
                                                   rows="3" 
                                                   placeholder="Enter your feedback for this student..."
                                                   style="margin-bottom: 0.5rem;">{{ student_response.found.feedback or '' }}</textarea>
                                         <div style="display: flex; gap: 0.5rem;">
-                                            <button onclick="saveFeedbackGrouped({{ loop.index0 }}, '{{ answer.student_id }}')" 
+                                            <button onclick="saveFeedbackGrouped('g{{ group.group_id }}-{{ outer_index }}', '{{ answer.student_id }}')" 
                                                     class="btn btn-sm btn-primary">
                                                 💾 Save
                                             </button>
-                                            <button onclick="cancelFeedbackGrouped({{ loop.index0 }})" 
+                                            <button onclick="cancelFeedbackGrouped('g{{ group.group_id }}-{{ outer_index }}')" 
                                                     class="btn btn-sm">
                                                 Cancel
                                             </button>
