@@ -374,3 +374,85 @@ def delete_course(course_id):
             'success': False,
             'message': 'Failed to delete course'
         }), 500
+
+@course_bp.route('/profile')
+@login_required
+def teacher_profile():
+    """
+    View and edit teacher profile
+    """
+    try:
+        from models.user import User
+        user_id = session.get('user_id')
+        user = User.find_by_id(user_id)
+        
+        if not user:
+            return render_template('error.html', message='User not found'), 404
+        
+        # Get teacher statistics
+        courses = Course.find_by_teacher(user_id)
+        total_courses = len(courses)
+        
+        # Count total students across all courses
+        total_students = 0
+        for course in courses:
+            course_id = str(course['_id'])
+            total_students += Student.count_by_course(course_id)
+        
+        # Count total activities
+        total_activities = 0
+        for course in courses:
+            course_id = str(course['_id'])
+            activities = Activity.find_by_course(course_id)
+            total_activities += len(activities)
+        
+        return render_template('teacher/profile.html',
+            user=user,
+            total_courses=total_courses,
+            total_students=total_students,
+            total_activities=total_activities
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading teacher profile: {e}")
+        return render_template('error.html', message='Failed to load profile'), 500
+
+@course_bp.route('/update-profile', methods=['POST'])
+@login_required
+def update_teacher_profile():
+    """
+    Update teacher profile information
+    """
+    try:
+        from models.user import User
+        user_id = session.get('user_id')
+        data = request.get_json() if request.is_json else request.form
+        
+        # Update user information
+        update_data = {}
+        
+        if data.get('email'):
+            update_data['email'] = data.get('email').strip()
+        
+        if data.get('name'):
+            update_data['name'] = data.get('name').strip()
+        
+        if update_data:
+            User.update_user(user_id, update_data)
+            
+            return jsonify({
+                'success': True,
+                'message': 'Profile updated successfully'
+            }), 200
+        
+        return jsonify({
+            'success': False,
+            'message': 'No data to update'
+        }), 400
+        
+    except Exception as e:
+        logger.error(f"Update teacher profile error: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to update profile'
+        }), 500
