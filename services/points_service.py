@@ -106,7 +106,15 @@ class PointsService:
             
         except Exception as e:
             logger.error(f"Error calculating points for {student_identifier}: {e}")
-            return {'total': 0}
+            return {
+                'poll_responses': 0,
+                'short_answer_responses': 0,
+                'word_cloud_responses': 0,
+                'correct_answers': 0,
+                'early_submissions': 0,
+                'feedback_received': 0,
+                'total': 0
+            }
     
     @staticmethod
     def get_course_leaderboard(course_id, limit=50):

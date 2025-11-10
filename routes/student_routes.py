@@ -483,6 +483,9 @@ def leaderboard():
         user_id = session.get('user_id')
         user = User.find_by_id(user_id)
         
+        if not user:
+            return render_template('error.html', message='User not found'), 404
+        
         # Get student information
         student_id = session.get('student_id')
         student_name = session.get('student_name', user.get('username', 'Anonymous'))
@@ -492,46 +495,74 @@ def leaderboard():
         
         # Get enrolled courses
         enrollments = db_service.find_many('enrollments', {'student_id': student_id})
-        course_ids = [e.get('course_id') for e in enrollments]
+        course_ids = [e.get('course_id') for e in enrollments if e.get('course_id')]
         
         # Get leaderboards for each course
         course_leaderboards = []
         my_course_ranks = []
         
         for course_id in course_ids:
-            course = Course.find_by_id(course_id)
-            if course:
-                leaderboard_data = PointsService.get_course_leaderboard(course_id, limit=10)
-                
-                # Find current student's rank
-                my_rank = PointsService.get_student_rank(student_id, course_id)
-                
-                course_leaderboards.append({
-                    'course': course,
-                    'leaderboard': leaderboard_data,
-                    'my_rank': my_rank
-                })
-                
-                my_course_ranks.append({
-                    'course_name': course.get('name'),
-                    'rank': my_rank['rank'],
-                    'total': my_rank['total_students'],
-                    'points': my_rank['points']
-                })
+            try:
+                course = Course.find_by_id(course_id)
+                if course:
+                    leaderboard_data = PointsService.get_course_leaderboard(course_id, limit=10)
+                    
+                    # Find current student's rank
+                    my_rank = PointsService.get_student_rank(student_id, course_id)
+                    
+                    course_leaderboards.append({
+                        'course': course,
+                        'leaderboard': leaderboard_data,
+                        'my_rank': my_rank
+                    })
+                    
+                    my_course_ranks.append({
+                        'course_name': course.get('name', 'Unknown Course'),
+                        'rank': my_rank.get('rank'),
+                        'total': my_rank.get('total_students', 0),
+                        'points': my_rank.get('points', 0)
+                    })
+            except Exception as course_error:
+                logger.error(f"Error processing course {course_id}: {course_error}")
+                continue
         
         # Get global leaderboard
-        global_leaderboard = PointsService.get_global_leaderboard(limit=50)
+        try:
+            global_leaderboard = PointsService.get_global_leaderboard(limit=50)
+        except Exception as e:
+            logger.error(f"Error getting global leaderboard: {e}")
+            global_leaderboard = []
         
         # Calculate student's overall points and achievements
-        overall_points = PointsService.calculate_student_points(student_id)
-        achievements = PointsService.get_achievements(student_id)
+        try:
+            overall_points = PointsService.calculate_student_points(student_id)
+        except Exception as e:
+            logger.error(f"Error calculating points: {e}")
+            overall_points = {
+                'poll_responses': 0,
+                'short_answer_responses': 0,
+                'word_cloud_responses': 0,
+                'correct_answers': 0,
+                'early_submissions': 0,
+                'feedback_received': 0,
+                'total': 0
+            }
+        
+        try:
+            achievements = PointsService.get_achievements(student_id)
+        except Exception as e:
+            logger.error(f"Error getting achievements: {e}")
+            achievements = []
         
         # Find student's global rank
         my_global_rank = None
-        for i, entry in enumerate(global_leaderboard):
-            if entry['student_id'] == student_id:
-                my_global_rank = i + 1
-                break
+        try:
+            for i, entry in enumerate(global_leaderboard):
+                if entry.get('student_id') == student_id:
+                    my_global_rank = i + 1
+                    break
+        except Exception as e:
+            logger.error(f"Error finding global rank: {e}")
         
         return render_template('student/leaderboard.html',
             user=user,
@@ -548,4 +579,4 @@ def leaderboard():
         logger.error(f"Error loading leaderboard: {e}")
         import traceback
         traceback.print_exc()
-        return render_template('error.html', message='Failed to load leaderboard'), 500
+        return render_template('error.html', message=f'Failed to load leaderboard: {str(e)}'), 500
