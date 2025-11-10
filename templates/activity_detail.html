@@ -19,9 +19,14 @@
                     </span>
                 </p>
             </div>
-            <button onclick="copyActivityLink('{{ activity.link }}')" class="btn btn-primary">
-                📋 Copy Student Link
-            </button>
+            <div class="flex gap-2">
+                <button onclick="copyActivityLink('{{ activity.link }}')" class="btn btn-primary">
+                    📋 Copy Student Link
+                </button>
+                <button onclick="deleteActivityDetail('{{ activity._id }}', '{{ activity.title }}')" class="btn btn-danger">
+                    🗑️ Delete Activity
+                </button>
+            </div>
         </div>
         
         <div class="card-body">
@@ -662,6 +667,41 @@ async function saveFeedbackGrouped(index, studentId) {
         hideLoading();
         console.error('Error saving feedback:', error);
         showAlert('Failed to save feedback', 'danger');
+    }
+}
+
+// Delete activity function
+async function deleteActivityDetail(activityId, activityTitle) {
+    if (!confirm(`Are you sure you want to delete "${activityTitle}"?\n\nThis will permanently delete:\n- The activity\n- All student responses\n- All feedback\n\nThis action cannot be undone.`)) {
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const response = await fetch(`/activity/${activityId}/delete`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        hideLoading();
+        
+        if (result.success) {
+            showAlert('Activity deleted successfully', 'success');
+            // Redirect to course detail page
+            setTimeout(() => {
+                window.location.href = '{{ url_for("course.course_detail", course_id=activity.course_id) }}';
+            }, 1000);
+        } else {
+            showAlert(result.message || 'Failed to delete activity', 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to delete activity', 'danger');
+        console.error('Delete error:', error);
     }
 }
 </script>
