@@ -498,17 +498,9 @@ def leaderboard():
         # Import points service
         from services.points_service import PointsService
         
-        # Get enrolled courses - check both student_id and username
-        query = {}
-        if student_id:
-            query = {'student_id': student_id}
-        else:
-            query = {'username': username}
-        
-        enrollments = db_service.find_many('enrollments', query)
-        course_ids = [e.get('course_id') for e in enrollments if e.get('course_id')]
-        
-        logger.info(f"Found {len(enrollments)} enrollments, {len(course_ids)} course IDs")
+        # Get enrolled courses from user's enrolled_courses array
+        course_ids = user.get('enrolled_courses', [])
+        logger.info(f"Found {len(course_ids)} enrolled courses: {course_ids}")
         
         # Get leaderboards for each course
         course_leaderboards = []
