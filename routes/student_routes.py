@@ -9,6 +9,7 @@ from models.user import User
 from models.course import Course
 from models.activity import Activity
 from models.student import Student
+from services.db_service import db_service
 from bson import ObjectId
 import logging
 
@@ -476,20 +477,75 @@ def my_activities():
 @student_required
 def leaderboard():
     """
-    View leaderboard (placeholder for future implementation)
+    View leaderboard with rankings and points
     """
     try:
         user_id = session.get('user_id')
         user = User.find_by_id(user_id)
         
-        # TODO: Implement actual leaderboard logic
-        # For now, show a placeholder
+        # Get student information
+        student_id = session.get('student_id')
+        student_name = session.get('student_name', user.get('username', 'Anonymous'))
+        
+        # Import points service
+        from services.points_service import PointsService
+        
+        # Get enrolled courses
+        enrollments = db_service.find_many('enrollments', {'student_id': student_id})
+        course_ids = [e.get('course_id') for e in enrollments]
+        
+        # Get leaderboards for each course
+        course_leaderboards = []
+        my_course_ranks = []
+        
+        for course_id in course_ids:
+            course = Course.find_by_id(course_id)
+            if course:
+                leaderboard_data = PointsService.get_course_leaderboard(course_id, limit=10)
+                
+                # Find current student's rank
+                my_rank = PointsService.get_student_rank(student_id, course_id)
+                
+                course_leaderboards.append({
+                    'course': course,
+                    'leaderboard': leaderboard_data,
+                    'my_rank': my_rank
+                })
+                
+                my_course_ranks.append({
+                    'course_name': course.get('name'),
+                    'rank': my_rank['rank'],
+                    'total': my_rank['total_students'],
+                    'points': my_rank['points']
+                })
+        
+        # Get global leaderboard
+        global_leaderboard = PointsService.get_global_leaderboard(limit=50)
+        
+        # Calculate student's overall points and achievements
+        overall_points = PointsService.calculate_student_points(student_id)
+        achievements = PointsService.get_achievements(student_id)
+        
+        # Find student's global rank
+        my_global_rank = None
+        for i, entry in enumerate(global_leaderboard):
+            if entry['student_id'] == student_id:
+                my_global_rank = i + 1
+                break
         
         return render_template('student/leaderboard.html',
             user=user,
-            message='Leaderboard feature coming soon!'
+            student_id=student_id,
+            course_leaderboards=course_leaderboards,
+            global_leaderboard=global_leaderboard,
+            my_course_ranks=my_course_ranks,
+            my_global_rank=my_global_rank,
+            overall_points=overall_points,
+            achievements=achievements
         )
         
     except Exception as e:
         logger.error(f"Error loading leaderboard: {e}")
+        import traceback
+        traceback.print_exc()
         return render_template('error.html', message='Failed to load leaderboard'), 500

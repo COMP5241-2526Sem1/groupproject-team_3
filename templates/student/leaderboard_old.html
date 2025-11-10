@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard - Student{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>🏆 Leaderboard</h1>
+        <p class="text-muted">Track your ranking and compete with peers</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body text-center">
+            <div class="coming-soon">
+                <div class="coming-soon-icon">🚧</div>
+                <h2>Coming Soon!</h2>
+                <p>{{ message }}</p>
+                <p class="text-muted">
+                    The leaderboard feature is currently under development. Soon you'll be able to:
+                </p>
+                <ul class="feature-list">
+                    <li>📊 View your ranking among peers</li>
+                    <li>🎯 Track your points and achievements</li>
+                    <li>🏅 Earn badges for completing activities</li>
+                    <li>📈 See your progress over time</li>
+                    <li>🎮 Participate in friendly competition</li>
+                </ul>
+                <p style="margin-top: 2rem;">
+                    <a href="{{ url_for('student.dashboard') }}" class="btn btn-primary">
+                        Back to Dashboard
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.coming-soon {
+    padding: 3rem 2rem;
+}
+.coming-soon-icon {
+    font-size: 5rem;
+    margin-bottom: 1.5rem;
+}
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 2rem auto;
+    max-width: 400px;
+    text-align: left;
+}
+.feature-list li {
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    border-left: 4px solid #4CAF50;
+}
+</style>
+{% endblock %}
