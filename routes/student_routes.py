@@ -486,16 +486,29 @@ def leaderboard():
         if not user:
             return render_template('error.html', message='User not found'), 404
         
-        # Get student information
-        student_id = session.get('student_id')
-        student_name = session.get('student_name', user.get('username', 'Anonymous'))
+        # Get student information - use user.get() for consistency with other routes
+        student_id = user.get('student_id')
+        username = user.get('username', 'Anonymous')
+        
+        # Also try username as identifier if student_id doesn't exist
+        student_identifier = student_id if student_id else username
+        
+        logger.info(f"Leaderboard: user_id={user_id}, student_id={student_id}, username={username}")
         
         # Import points service
         from services.points_service import PointsService
         
-        # Get enrolled courses
-        enrollments = db_service.find_many('enrollments', {'student_id': student_id})
+        # Get enrolled courses - check both student_id and username
+        query = {}
+        if student_id:
+            query = {'student_id': student_id}
+        else:
+            query = {'username': username}
+        
+        enrollments = db_service.find_many('enrollments', query)
         course_ids = [e.get('course_id') for e in enrollments if e.get('course_id')]
+        
+        logger.info(f"Found {len(enrollments)} enrollments, {len(course_ids)} course IDs")
         
         # Get leaderboards for each course
         course_leaderboards = []
@@ -507,8 +520,10 @@ def leaderboard():
                 if course:
                     leaderboard_data = PointsService.get_course_leaderboard(course_id, limit=10)
                     
-                    # Find current student's rank
-                    my_rank = PointsService.get_student_rank(student_id, course_id)
+                    # Find current student's rank - use student_identifier
+                    my_rank = PointsService.get_student_rank(student_identifier, course_id)
+                    
+                    logger.info(f"Course {course.get('name')}: {len(leaderboard_data)} students, my rank: {my_rank}")
                     
                     course_leaderboards.append({
                         'course': course,
@@ -529,13 +544,15 @@ def leaderboard():
         # Get global leaderboard
         try:
             global_leaderboard = PointsService.get_global_leaderboard(limit=50)
+            logger.info(f"Global leaderboard: {len(global_leaderboard)} students")
         except Exception as e:
             logger.error(f"Error getting global leaderboard: {e}")
             global_leaderboard = []
         
-        # Calculate student's overall points and achievements
+        # Calculate student's overall points and achievements - use student_identifier
         try:
-            overall_points = PointsService.calculate_student_points(student_id)
+            overall_points = PointsService.calculate_student_points(student_identifier)
+            logger.info(f"Overall points for {student_identifier}: {overall_points}")
         except Exception as e:
             logger.error(f"Error calculating points: {e}")
             overall_points = {
@@ -549,16 +566,16 @@ def leaderboard():
             }
         
         try:
-            achievements = PointsService.get_achievements(student_id)
+            achievements = PointsService.get_achievements(student_identifier)
         except Exception as e:
             logger.error(f"Error getting achievements: {e}")
             achievements = []
         
-        # Find student's global rank
+        # Find student's global rank - use student_identifier
         my_global_rank = None
         try:
             for i, entry in enumerate(global_leaderboard):
-                if entry.get('student_id') == student_id:
+                if entry.get('student_id') == student_identifier:
                     my_global_rank = i + 1
                     break
         except Exception as e:
@@ -566,7 +583,7 @@ def leaderboard():
         
         return render_template('student/leaderboard.html',
             user=user,
-            student_id=student_id,
+            student_id=student_identifier,
             course_leaderboards=course_leaderboards,
             global_leaderboard=global_leaderboard,
             my_course_ranks=my_course_ranks,
@@ -580,3 +597,79 @@ def leaderboard():
         import traceback
         traceback.print_exc()
         return render_template('error.html', message=f'Failed to load leaderboard: {str(e)}'), 500
+
+@student_bp.route('/profile')
+@student_required
+def profile():
+    """
+    View and edit student profile
+    """
+    try:
+        user_id = session.get('user_id')
+        user = User.find_by_id(user_id)
+        
+        if not user:
+            return render_template('error.html', message='User not found'), 404
+        
+        # Get student stats
+        student_id = user.get('student_id', user.get('username'))
+        
+        from services.points_service import PointsService
+        overall_points = PointsService.calculate_student_points(student_id)
+        achievements = PointsService.get_achievements(student_id)
+        activities_count = PointsService.count_student_activities(student_id)
+        
+        # Get enrolled courses count
+        enrollments = db_service.find_many('enrollments', {'student_id': student_id})
+        
+        return render_template('student/profile.html',
+            user=user,
+            overall_points=overall_points,
+            achievements=achievements,
+            activities_count=activities_count,
+            courses_count=len(enrollments)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading profile: {e}")
+        return render_template('error.html', message='Failed to load profile'), 500
+
+@student_bp.route('/update-profile', methods=['POST'])
+@student_required
+def update_profile():
+    """
+    Update student profile information
+    """
+    try:
+        user_id = session.get('user_id')
+        data = request.get_json() if request.is_json else request.form
+        
+        # Update user information
+        update_data = {}
+        
+        if data.get('email'):
+            update_data['email'] = data.get('email').strip()
+        
+        if data.get('student_id'):
+            update_data['student_id'] = data.get('student_id').strip()
+        
+        if update_data:
+            from models.user import User
+            User.update_user(user_id, update_data)
+            
+            return jsonify({
+                'success': True,
+                'message': 'Profile updated successfully'
+            }), 200
+        
+        return jsonify({
+            'success': False,
+            'message': 'No data to update'
+        }), 400
+        
+    except Exception as e:
+        logger.error(f"Update profile error: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to update profile'
+        }), 500
