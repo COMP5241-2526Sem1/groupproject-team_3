@@ -30,6 +30,7 @@
                     <li><a href="{{ url_for('student.browse_courses') }}">🔍 Browse Courses</a></li>
                     <li><a href="{{ url_for('student.my_activities') }}">✏️ My Activities</a></li>
                     <li><a href="{{ url_for('student.leaderboard') }}">🏆 Leaderboard</a></li>
+                    <li><a href="{{ url_for('student.profile') }}">⚙️ Settings</a></li>
                 
                 {% elif session.get('role') == 'teacher' %}
                     <li><a href="{{ url_for('course.dashboard') }}">📊 Dashboard</a></li>

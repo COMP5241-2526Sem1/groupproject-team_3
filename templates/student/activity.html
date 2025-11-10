@@ -58,20 +58,43 @@
                         {% endif %}
                     {% elif activity.type == 'short_answer' %}
                         <p><strong>Your Answer:</strong></p>
-                        <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem;">
+                        <div id="displayAnswer" style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem;">
                             {{ student_response.text }}
                         </div>
+                        <button type="button" onclick="enableEdit('short_answer')" class="btn btn-primary" style="margin-top: 1rem;">
+                            ✏️ Edit Answer
+                        </button>
                     {% elif activity.type == 'word_cloud' %}
                         <p><strong>Your Keywords:</strong></p>
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        <div id="displayKeywords" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                             {% for keyword in student_response.keywords %}
                             <span class="activity-type activity-word-cloud">{{ keyword }}</span>
                             {% endfor %}
                         </div>
+                        <button type="button" onclick="enableEdit('word_cloud')" class="btn btn-primary" style="margin-top: 1rem;">
+                            ✏️ Edit Keywords
+                        </button>
                     {% endif %}
                     <p style="margin-top: 1rem; color: #6b7280;">
                         <small>Submitted at: {{ student_response.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if student_response.submitted_at else 'N/A' }}</small>
                     </p>
+                    
+                    <!-- Teacher Feedback Display -->
+                    {% if student_response.feedback %}
+                    <div style="margin-top: 1.5rem; padding: 1rem; background: #ecfdf5; border-left: 4px solid #10b981; border-radius: 0.5rem;">
+                        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: #059669;">
+                            📝 Teacher's Feedback
+                        </p>
+                        <p style="margin: 0; color: #374151;">
+                            {{ student_response.feedback }}
+                        </p>
+                        {% if student_response.feedback_at %}
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.75rem; color: #6b7280;">
+                            Feedback provided: {{ student_response.feedback_at.strftime('%Y-%m-%d %H:%M') }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -167,6 +190,7 @@
 
 {% if not has_responded %}
 <script>
+// Original response form logic
 {% if activity.type == 'word_cloud' %}
 // Word cloud keyword management
 let keywords = [];
@@ -344,5 +368,233 @@ document.getElementById('answerText').addEventListener('input', (e) => {
 });
 {% endif %}
 </script>
+
+{% else %}
+<!-- Edit mode logic when user has already responded -->
+<script>
+let isEditMode = false;
+let originalData = null;
+
+{% if activity.type == 'word_cloud' %}
+// Initialize keywords from existing response
+let keywords = {{ student_response.keywords | tojson }};
 {% endif %}
+
+// Enable edit mode function
+function enableEdit(activityType) {
+    isEditMode = true;
+    
+    if (activityType === 'short_answer') {
+        // Store original data
+        originalData = document.getElementById('displayAnswer').textContent.trim();
+        
+        // Hide display and show edit form
+        document.getElementById('displayAnswer').style.display = 'none';
+        
+        // Create edit form
+        const editForm = document.createElement('div');
+        editForm.id = 'editForm';
+        editForm.innerHTML = `
+            <textarea id="answerText" class="form-control" rows="6" required>${originalData}</textarea>
+            <small id="charCount" class="text-muted">Word count</small>
+            <button type="button" class="btn btn-primary mt-3" onclick="submitEdit('short_answer')">
+                Update Answer
+            </button>
+            <button type="button" class="btn btn-secondary mt-3" onclick="cancelEdit('short_answer')">
+                Cancel
+            </button>
+        `;
+        
+        // Insert after displayAnswer
+        document.getElementById('displayAnswer').parentNode.insertBefore(
+            editForm, 
+            document.getElementById('displayAnswer').nextSibling
+        );
+        
+        // Hide edit button
+        event.target.style.display = 'none';
+        
+        // Add word counter
+        document.getElementById('answerText').addEventListener('input', (e) => {
+            const text = e.target.value;
+            const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+            document.getElementById('charCount').textContent = 
+                `${words.length} / {{ activity.content.word_limit }} words suggested`;
+        });
+        
+        // Trigger initial count
+        document.getElementById('answerText').dispatchEvent(new Event('input'));
+        
+    } else if (activityType === 'word_cloud') {
+        // Store original data
+        originalData = [...keywords];
+        
+        // Hide display and show edit form
+        document.getElementById('displayKeywords').style.display = 'none';
+        
+        // Create edit form
+        const editForm = document.createElement('div');
+        editForm.id = 'editForm';
+        editForm.innerHTML = `
+            <div class="keyword-input-group">
+                <input type="text" id="keywordInput" class="form-control" 
+                       placeholder="Enter a keyword and press Enter (3-5 words)" maxlength="20">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addKeyword()">
+                    Add Keyword
+                </button>
+            </div>
+            <div id="keywordTags" class="keyword-tags mt-3"></div>
+            <small class="text-muted">Keywords: <span id="keywordCount">${keywords.length}</span> / 5</small>
+            <div class="mt-3">
+                <button type="button" class="btn btn-primary" onclick="submitEdit('word_cloud')">
+                    Update Keywords
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="cancelEdit('word_cloud')">
+                    Cancel
+                </button>
+            </div>
+        `;
+        
+        // Insert after displayKeywords
+        document.getElementById('displayKeywords').parentNode.insertBefore(
+            editForm,
+            document.getElementById('displayKeywords').nextSibling
+        );
+        
+        // Hide edit button
+        event.target.style.display = 'none';
+        
+        // Render existing keywords
+        renderKeywords();
+        
+        // Add enter key support
+        document.getElementById('keywordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addKeyword();
+            }
+        });
+    }
+}
+
+// Submit edited response
+async function submitEdit(activityType) {
+    // Build data object with proper structure
+    const data = {
+        is_update: true,
+        student_id: '{{ user.student_id }}',
+        student_name: '{{ user.username }}'
+    };
+    
+    if (activityType === 'short_answer') {
+        const text = document.getElementById('answerText').value.trim();
+        if (!text) {
+            alert('Please enter your answer');
+            return;
+        }
+        data.text = text;  // Add text directly to data object
+        
+    } else if (activityType === 'word_cloud') {
+        if (keywords.length < 3 || keywords.length > 5) {
+            alert('Please add 3-5 keywords');
+            return;
+        }
+        data.keywords = keywords;  // Add keywords directly to data object
+    }
+    
+    try {
+        const response = await fetch('/activity/{{ activity._id }}/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Response updated successfully!');
+            location.reload(); // Refresh to show updated response
+        } else {
+            alert('Failed to update: ' + (result.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to update response');
+    }
+}
+
+// Cancel edit and restore display
+function cancelEdit(activityType) {
+    isEditMode = false;
+    
+    // Remove edit form
+    const editForm = document.getElementById('editForm');
+    if (editForm) editForm.remove();
+    
+    // Show original display
+    if (activityType === 'short_answer') {
+        document.getElementById('displayAnswer').style.display = 'block';
+        // Show edit button
+        document.querySelector('button[onclick*="short_answer"]').style.display = 'inline-block';
+        
+    } else if (activityType === 'word_cloud') {
+        // Restore original keywords
+        keywords = [...originalData];
+        document.getElementById('displayKeywords').style.display = 'block';
+        // Show edit button
+        document.querySelector('button[onclick*="word_cloud"]').style.display = 'inline-block';
+    }
+}
+
+{% if activity.type == 'word_cloud' %}
+// Word cloud keyword management functions
+function addKeyword() {
+    const input = document.getElementById('keywordInput');
+    const keyword = input.value.trim();
+    
+    if (!keyword) return;
+    
+    const words = keyword.split(/\s+/);
+    if (words.length < 1 || words.length > 3) {
+        alert('Each keyword should be 1-3 words');
+        return;
+    }
+    
+    if (keywords.length >= 5) {
+        alert('Maximum 5 keywords allowed');
+        return;
+    }
+    
+    if (keywords.includes(keyword)) {
+        alert('This keyword already exists');
+        return;
+    }
+    
+    keywords.push(keyword);
+    input.value = '';
+    renderKeywords();
+}
+
+function removeKeyword(keyword) {
+    keywords = keywords.filter(k => k !== keyword);
+    renderKeywords();
+}
+
+function renderKeywords() {
+    const container = document.getElementById('keywordTags');
+    if (!container) return;
+    
+    container.innerHTML = keywords.map(keyword => `
+        <span class="keyword-tag">
+            ${keyword}
+            <button type="button" class="btn-close-tag" onclick="removeKeyword('${keyword}')">&times;</button>
+        </span>
+    `).join('');
+    
+    document.getElementById('keywordCount').textContent = keywords.length;
+}
+{% endif %}
+</script>
+{% endif %}
+
 {% endblock %}

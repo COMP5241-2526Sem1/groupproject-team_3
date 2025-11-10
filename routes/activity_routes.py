@@ -281,21 +281,9 @@ def activity_detail(activity_id):
             participation_rate = round((response_count / enrolled_count) * 100)
         print(f"DEBUG: Participation rate: {participation_rate}%")
         
-        # Get grouped answers if short answer type
-        grouped_answers = None
-        if activity['type'] == Activity.TYPE_SHORT_ANSWER and responses:
-            print("DEBUG: Processing short answer grouping...")
-            # Check if already grouped
-            if 'grouped_answers' not in activity:
-                print("DEBUG: Calling AI to group answers...")
-                # Group answers using AI
-                grouped_answers = genai_service.group_answers(responses, activity['content']['question'])
-                # Save grouped answers
-                Activity.update_activity(activity_id, {'grouped_answers': grouped_answers})
-                print("DEBUG: Grouped answers saved")
-            else:
-                grouped_answers = activity['grouped_answers']
-                print("DEBUG: Using cached grouped answers")
+        # Don't auto-load grouped answers - let frontend handle display
+        # Just pass whether grouping is available
+        has_grouped_answers = activity.get('grouped_answers') is not None
         
         print("DEBUG: Rendering template...")
         return render_template(
@@ -305,7 +293,7 @@ def activity_detail(activity_id):
             response_count=response_count,
             enrolled_count=enrolled_count,
             participation_rate=participation_rate,
-            grouped_answers=grouped_answers
+            has_grouped_answers=has_grouped_answers
         )
         
     except Exception as e:
@@ -450,16 +438,26 @@ def submit_response(activity_id):
                     'message': 'Please enter at least one keyword'
                 }), 400
         
-        # Add response to activity
-        success = Activity.add_response(activity_id, response_data)
+        # Check if this is an update (for short_answer and word_cloud)
+        is_update = data.get('is_update', False)
+        student_identifier = response_data['student_id']
+        
+        # For short answer and word cloud, allow updates
+        if is_update and activity['type'] in [Activity.TYPE_SHORT_ANSWER, Activity.TYPE_WORD_CLOUD]:
+            success = Activity.update_response(activity_id, student_identifier, response_data)
+            action = 'updated'
+        else:
+            # Add new response (for poll, or first submission for short_answer/word_cloud)
+            success = Activity.add_response(activity_id, response_data)
+            action = 'submitted'
         
         if success:
-            logger.info(f"Response submitted to activity {activity_id}")
+            logger.info(f"Response {action} for activity {activity_id}")
             
             # Prepare result message
             result = {
                 'success': True,
-                'message': 'Response submitted successfully'
+                'message': f'Response {action} successfully'
             }
             
             # For multi-question polls, include evaluation results
@@ -586,4 +584,61 @@ def delete_activity(activity_id):
         return jsonify({
             'success': False,
             'message': 'Failed to delete activity'
+        }), 500
+
+@activity_bp.route('/activity/<activity_id>/feedback', methods=['POST'])
+@login_required
+def add_feedback(activity_id):
+    """
+    Add teacher feedback to student response
+    """
+    try:
+        activity = Activity.find_by_id(activity_id)
+        
+        if not activity:
+            return jsonify({
+                'success': False,
+                'message': 'Activity not found'
+            }), 404
+        
+        # Check ownership
+        if activity['teacher_id'] != session['user_id']:
+            return jsonify({
+                'success': False,
+                'message': 'Access denied'
+            }), 403
+        
+        data = request.get_json() if request.is_json else request.form
+        student_id = data.get('student_id', '').strip()
+        feedback = data.get('feedback', '').strip()
+        
+        if not student_id or not feedback:
+            return jsonify({
+                'success': False,
+                'message': 'Student ID and feedback are required'
+            }), 400
+        
+        # Find the response and update it with feedback
+        from datetime import datetime
+        success = Activity.add_feedback_to_response(activity_id, student_id, feedback)
+        
+        if success:
+            logger.info(f"Feedback added to response in activity {activity_id} for student {student_id}")
+            return jsonify({
+                'success': True,
+                'message': 'Feedback saved successfully'
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to save feedback. Student response not found.'
+            }), 400
+        
+    except Exception as e:
+        logger.error(f"Add feedback error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': 'Failed to save feedback'
         }), 500
