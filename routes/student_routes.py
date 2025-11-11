@@ -277,6 +277,9 @@ def view_activity(activity_id):
             return render_template('error.html', 
                 message='You must be enrolled in the course to access this activity'), 403
         
+        # Check if activity has expired
+        is_expired = Activity.is_expired(activity)
+        
         # Check if student has already responded
         student_id = user.get('student_id')
         username = user.get('username')
@@ -290,7 +293,8 @@ def view_activity(activity_id):
             activity=activity,
             course=course,
             student_response=student_response,
-            has_responded=student_response is not None
+            has_responded=student_response is not None,
+            is_expired=is_expired
         )
         
     except Exception as e:

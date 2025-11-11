@@ -119,6 +119,15 @@
                         </div>
                     </div>
                     
+                    <!-- Deadline Field (Common for all activity types) -->
+                    <div class="form-group">
+                        <label class="form-label">Deadline (Optional)</label>
+                        <input type="datetime-local" name="deadline" class="form-control">
+                        <small class="form-text text-muted">
+                            Students cannot participate after this date and time. Leave empty for no deadline.
+                        </small>
+                    </div>
+                    
                     <button type="submit" class="btn btn-primary" style="width: 100%;">
                         Create Activity
                     </button>
@@ -203,6 +212,15 @@
                         </div>
                         <small style="color: #6b7280; display: block; margin-top: 0.5rem;">
                             AI will extract content from your file and generate activities based on the material.
+                        </small>
+                    </div>
+                    
+                    <!-- Deadline Field for AI Form -->
+                    <div class="form-group">
+                        <label class="form-label">Deadline (Optional)</label>
+                        <input type="datetime-local" name="deadline" id="ai_deadline" class="form-control">
+                        <small class="form-text text-muted">
+                            Students cannot participate after this date and time. Leave empty for no deadline.
                         </small>
                     </div>
                     
@@ -556,6 +574,12 @@ async function confirmAIActivity() {
         title: aiGeneratedData.title || 'AI Generated Activity',
         ai_generated: true
     };
+    
+    // Get deadline from AI form
+    const deadlineInput = document.getElementById('ai_deadline');
+    if (deadlineInput && deadlineInput.value) {
+        data.deadline = deadlineInput.value;
+    }
     
     // Handle poll with multiple questions
     if (aiGeneratedData.activity_type === 'poll' && aiGeneratedData.questions) {

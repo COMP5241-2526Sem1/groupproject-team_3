@@ -128,13 +128,28 @@ def create_activity():
                 'message': 'Invalid activity type'
             }), 400
         
+        # Parse deadline if provided
+        deadline = None
+        deadline_str = data.get('deadline', '').strip()
+        if deadline_str:
+            try:
+                # Convert from local datetime string to UTC datetime object
+                from datetime import datetime
+                deadline = datetime.fromisoformat(deadline_str)
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid deadline format'
+                }), 400
+        
         # Create activity
         activity = Activity(
             title=title,
             activity_type=activity_type,
             content=content,
             course_id=course_id,
-            teacher_id=session['user_id']
+            teacher_id=session['user_id'],
+            deadline=deadline
         )
         
         activity_id = activity.save()
@@ -423,6 +438,13 @@ def submit_response(activity_id):
             return jsonify({
                 'success': False,
                 'message': 'Activity is no longer active'
+            }), 410
+        
+        # Check if activity has expired
+        if Activity.is_expired(activity):
+            return jsonify({
+                'success': False,
+                'message': 'This activity has passed its deadline and is no longer accepting responses'
             }), 410
         
         data = request.get_json() if request.is_json else request.form
