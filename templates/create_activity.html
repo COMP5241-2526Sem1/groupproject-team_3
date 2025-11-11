@@ -242,17 +242,21 @@ function toggleContentSource() {
     const textGroup = document.getElementById('textContentGroup');
     const fileGroup = document.getElementById('fileContentGroup');
     const textArea = document.getElementById('teaching_content');
+    const fileInput = document.getElementById('course_file');
+    
+    console.log('Content source changed to:', source);
     
     if (source === 'text') {
         textGroup.style.display = 'block';
         fileGroup.style.display = 'none';
-        textArea.required = true;
-        document.getElementById('course_file').required = false;
+        // Clear file input when switching to text
+        fileInput.value = '';
+        document.getElementById('fileInfo').style.display = 'none';
     } else {
         textGroup.style.display = 'none';
         fileGroup.style.display = 'block';
-        textArea.required = false;
-        document.getElementById('course_file').required = true;
+        // Clear text area when switching to file
+        textArea.value = '';
     }
 }
 
@@ -374,27 +378,36 @@ document.getElementById('aiGenerateForm').addEventListener('submit', async (e) =
     const contentSource = formData.get('content_source');
     
     // Validate content source
-    if (contentSource === 'text' && !formData.get('teaching_content').trim()) {
-        showAlert('Please enter teaching content', 'danger');
-        return;
+    if (contentSource === 'text') {
+        const teachingContent = formData.get('teaching_content');
+        if (!teachingContent || !teachingContent.trim()) {
+            showAlert('Please enter teaching content', 'danger');
+            return;
+        }
     }
     
-    if (contentSource === 'file' && !formData.get('course_file').name) {
-        showAlert('Please select a file', 'danger');
-        return;
+    if (contentSource === 'file') {
+        const file = formData.get('course_file');
+        if (!file || file.size === 0) {
+            showAlert('Please select a file', 'danger');
+            return;
+        }
     }
     
+    console.log('Form submitted with content source:', contentSource);
     showLoading();
     
     try {
         // Use FormData for file upload, regular fetch for text
         let response;
         if (contentSource === 'file') {
+            console.log('Uploading file...');
             response = await fetch('{{ url_for("activity.ai_generate_activity") }}', {
                 method: 'POST',
                 body: formData  // Send FormData directly for file upload
             });
         } else {
+            console.log('Sending text content...');
             // For text content, use JSON
             const data = {
                 course_id: formData.get('course_id'),
@@ -412,7 +425,9 @@ document.getElementById('aiGenerateForm').addEventListener('submit', async (e) =
             });
         }
         
+        console.log('Response received:', response.status);
         const result = await response.json();
+        console.log('Result:', result);
         hideLoading();
         
         if (result.success) {
@@ -421,12 +436,12 @@ document.getElementById('aiGenerateForm').addEventListener('submit', async (e) =
             displayAIPreview(result.generated_content);
             document.getElementById('aiPreview').style.display = 'block';
         } else {
-            showAlert(result.message, 'danger');
+            showAlert(result.message || 'Failed to generate activity', 'danger');
         }
     } catch (error) {
         hideLoading();
         showAlert('Failed to generate activity: ' + error.message, 'danger');
-        console.error(error);
+        console.error('Error:', error);
     }
 });
 
