@@ -11,11 +11,11 @@
         <div style="margin-top: 1rem;">
             {% if is_expired %}
             <span style="background: #fee2e2; color: #991b1b; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500;">
-                ⏰ Expired: {{ activity.deadline.strftime('%Y-%m-%d %H:%M') }}
+                ⏰ Expired: {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') if activity.deadline_display else activity.deadline.strftime('%Y-%m-%d %H:%M') }} (HKT)
             </span>
             {% else %}
             <span style="background: #fef3c7; color: #92400e; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500;">
-                ⏰ Deadline: {{ activity.deadline.strftime('%Y-%m-%d %H:%M') }}
+                ⏰ Deadline: {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') if activity.deadline_display else activity.deadline.strftime('%Y-%m-%d %H:%M') }} (HKT)
             </span>
             {% endif %}
         </div>
@@ -117,7 +117,7 @@
             <div class="alert alert-danger">
                 <h3>⏰ This Activity Has Expired</h3>
                 <p>The deadline for this activity has passed. You can no longer submit responses.</p>
-                <p><strong>Deadline was:</strong> {{ activity.deadline.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p><strong>Deadline was:</strong> {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') if activity.deadline_display else activity.deadline.strftime('%Y-%m-%d %H:%M') }} (HKT)</p>
                 <a href="{{ url_for('student.course_detail', course_id=course._id) }}" 
                    class="btn btn-primary" style="margin-top: 1rem;">Back to Course</a>
             </div>

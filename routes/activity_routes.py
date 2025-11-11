@@ -133,10 +133,20 @@ def create_activity():
         deadline_str = data.get('deadline', '').strip()
         if deadline_str:
             try:
-                # Convert from local datetime string to UTC datetime object
-                from datetime import datetime
-                deadline = datetime.fromisoformat(deadline_str)
-            except ValueError:
+                # Convert from local datetime string to datetime object
+                from datetime import datetime, timezone
+                # Parse the ISO format datetime (comes from datetime-local input)
+                local_deadline = datetime.fromisoformat(deadline_str)
+                
+                # Assume the input is in Hong Kong timezone (UTC+8)
+                # Convert to UTC for storage
+                from datetime import timedelta
+                hk_offset = timedelta(hours=8)
+                deadline = local_deadline - hk_offset
+                
+                logger.info(f"Deadline input (HK time): {local_deadline}, Stored (UTC): {deadline}")
+            except ValueError as e:
+                logger.error(f"Deadline parse error: {e}, Input: {deadline_str}")
                 return jsonify({
                     'success': False,
                     'message': 'Invalid deadline format'
@@ -222,9 +232,20 @@ def ai_generate_activity():
                 teaching_content = extract_document_content(file.filename, file_content)
                 
                 # Summarize if too long to avoid token limits
-                teaching_content = summarize_content(teaching_content, max_length=3000)
+                # For large files, be more aggressive with summarization
+                if len(file_content) > 5 * 1024 * 1024:  # Files larger than 5MB
+                    teaching_content = summarize_content(teaching_content, max_length=2000)
+                    logger.info(f"Large file detected, using shorter summary (2000 chars)")
+                else:
+                    teaching_content = summarize_content(teaching_content, max_length=3000)
                 
                 logger.info(f"Extracted {len(teaching_content)} characters from {file.filename}")
+                
+                if not teaching_content or len(teaching_content) < 50:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Could not extract meaningful content from file. Please check the file format.'
+                    }), 400
                 
             except Exception as e:
                 logger.error(f"Document extraction error: {e}")

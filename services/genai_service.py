@@ -143,10 +143,11 @@ Return the response in JSON format:
             # Add buffer for JSON structure
             if activity_type == 'poll':
                 base_tokens = 200  # For JSON structure and title
-                tokens_per_question = 200  # Per question (question + options + explanation)
+                tokens_per_question = 180  # Per question (reduced to be safer)
                 max_tokens = base_tokens + (num_questions * tokens_per_question)
-                # Cap at 4000 to stay within model limits
-                max_tokens = min(max_tokens, 4000)
+                # Cap at 3000 to avoid token limit issues with large inputs
+                max_tokens = min(max_tokens, 3000)
+                logger.info(f"Requesting {num_questions} poll questions with max_tokens={max_tokens}")
             else:
                 max_tokens = 1500  # Sufficient for other activity types
             
@@ -154,15 +155,21 @@ Return the response in JSON format:
             # Use lower temperature for poll questions to ensure consistent formatting
             temperature = 0.5 if activity_type == 'poll' else 0.7
             
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an expert educational content creator for university lecturers in Hong Kong. Generate high-quality learning activities in English. Always return valid JSON format."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": "You are an expert educational content creator for university lecturers in Hong Kong. Generate high-quality learning activities in English. Always return valid JSON format."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    timeout=self.timeout
+                )
+            except Exception as api_error:
+                logger.error(f"OpenAI API error: {api_error}")
+                # If API call fails, return fallback immediately
+                return self._get_fallback_activity(activity_type, teaching_content)
             
             # Parse response
             content = response.choices[0].message.content

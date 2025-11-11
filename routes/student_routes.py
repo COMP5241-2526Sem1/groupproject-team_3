@@ -280,6 +280,13 @@ def view_activity(activity_id):
         # Check if activity has expired
         is_expired = Activity.is_expired(activity)
         
+        # Convert deadline from UTC to Hong Kong time (UTC+8) for display
+        if activity.get('deadline'):
+            from datetime import timedelta
+            utc_deadline = activity['deadline']
+            hk_deadline = utc_deadline + timedelta(hours=8)
+            activity['deadline_display'] = hk_deadline
+        
         # Check if student has already responded
         student_id = user.get('student_id')
         username = user.get('username')
