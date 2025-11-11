@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test File Upload</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #result { margin-top: 20px; padding: 15px; border: 1px solid #ddd; display: none; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .loading { color: #007bff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Test File Upload for AI Generation</h1>
+    
+    <form id="testForm">
+        <div class="form-group">
+            <label>Course ID:</label>
+            <input type="text" name="course_id" required placeholder="Enter course ID">
+        </div>
+        
+        <div class="form-group">
+            <label>Activity Type:</label>
+            <select name="type" id="activityType">
+                <option value="short_answer">Short Answer</option>
+                <option value="poll">Poll</option>
+                <option value="word_cloud">Word Cloud</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="numQuestionsGroup" style="display: none;">
+            <label>Number of Questions (for Poll):</label>
+            <input type="number" name="num_questions" value="3" min="1" max="10">
+        </div>
+        
+        <div class="form-group">
+            <label>Content Source:</label>
+            <select name="content_source" id="contentSource" onchange="toggleSource()">
+                <option value="text">Text</option>
+                <option value="file">File</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="textGroup">
+            <label>Teaching Content:</label>
+            <textarea name="teaching_content" rows="5" placeholder="Enter teaching content..."></textarea>
+        </div>
+        
+        <div class="form-group" id="fileGroup" style="display: none;">
+            <label>Upload File (PDF/PPT):</label>
+            <input type="file" name="course_file" accept=".pdf,.ppt,.pptx" onchange="showFileInfo(this)">
+            <div id="fileInfo" style="margin-top: 10px; color: green;"></div>
+        </div>
+        
+        <button type="submit">🤖 Generate with AI</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <script>
+        const form = document.getElementById('testForm');
+        const resultDiv = document.getElementById('result');
+        
+        // Show/hide number of questions
+        document.getElementById('activityType').addEventListener('change', function() {
+            const numQuestionsGroup = document.getElementById('numQuestionsGroup');
+            numQuestionsGroup.style.display = this.value === 'poll' ? 'block' : 'none';
+        });
+        
+        // Toggle between text and file input
+        function toggleSource() {
+            const source = document.getElementById('contentSource').value;
+            const textGroup = document.getElementById('textGroup');
+            const fileGroup = document.getElementById('fileGroup');
+            
+            if (source === 'text') {
+                textGroup.style.display = 'block';
+                fileGroup.style.display = 'none';
+            } else {
+                textGroup.style.display = 'none';
+                fileGroup.style.display = 'block';
+            }
+        }
+        
+        // Show file info
+        function showFileInfo(input) {
+            const file = input.files[0];
+            if (file) {
+                const size = (file.size / (1024 * 1024)).toFixed(2);
+                document.getElementById('fileInfo').innerHTML = 
+                    `Selected: ${file.name} (${size} MB)`;
+            }
+        }
+        
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const contentSource = formData.get('content_source');
+            
+            // Validate
+            if (contentSource === 'text') {
+                const content = formData.get('teaching_content');
+                if (!content || !content.trim()) {
+                    showResult('Please enter teaching content', false);
+                    return;
+                }
+            } else {
+                const file = formData.get('course_file');
+                if (!file || file.size === 0) {
+                    showResult('Please select a file', false);
+                    return;
+                }
+            }
+            
+            showResult('⏳ Generating activity... Please wait...', null);
+            
+            try {
+                const response = await fetch('/activity/ai-generate', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const text = await response.text();
+                console.log('Raw response:', text);
+                
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    showResult(`JSON Parse Error: ${text.substring(0, 200)}`, false);
+                    return;
+                }
+                
+                if (result.success) {
+                    showResult(`✅ Success! Generated: ${result.generated_content.title}\n\nContent: ${JSON.stringify(result.generated_content, null, 2)}`, true);
+                } else {
+                    showResult(`❌ Error: ${result.message}`, false);
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                showResult(`❌ Network Error: ${error.message}`, false);
+            }
+        });
+        
+        function showResult(message, isSuccess) {
+            resultDiv.style.display = 'block';
+            resultDiv.className = '';
+            if (isSuccess !== null) {
+                resultDiv.className = isSuccess ? 'success' : 'error';
+            } else {
+                resultDiv.className = 'loading';
+            }
+            resultDiv.innerHTML = '<pre>' + message + '</pre>';
+        }
+    </script>
+</body>
+</html>

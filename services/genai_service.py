@@ -137,7 +137,7 @@ Return the response in JSON format:
                 max_tokens = base_tokens + (num_questions * tokens_per_question)
                 # Increase limit to allow for larger responses
                 # gpt-4o-mini supports up to 16,384 tokens output
-                max_tokens = min(max_tokens, 8000)
+                max_tokens = min(max_tokens, 16000)
                 logger.info(f"Requesting {num_questions} poll questions with max_tokens={max_tokens}")
             else:
                 max_tokens = 2000  # Sufficient for other activity types

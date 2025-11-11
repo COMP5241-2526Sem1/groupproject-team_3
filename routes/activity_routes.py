@@ -191,8 +191,13 @@ def ai_generate_activity():
     Uses GPT-4 to create activity based on teaching content or uploaded document
     """
     try:
+        logger.info("=== AI Generate Activity Request Started ===")
+        logger.info(f"Form data keys: {list(request.form.keys())}")
+        logger.info(f"Files keys: {list(request.files.keys())}")
+        
         # Check if this is a file upload or text content
         content_source = request.form.get('content_source', 'text')
+        logger.info(f"Content source: {content_source}")
         teaching_content = ''
         
         if content_source == 'file' and 'course_file' in request.files:
@@ -297,7 +302,19 @@ def ai_generate_activity():
         
         # Generate activity using AI
         logger.info(f"Generating AI activity for: {teaching_content[:100]}... ({activity_type}, {num_questions} questions)")
-        generated = genai_service.generate_activity(teaching_content, activity_type, num_questions)
+        logger.info(f"Content length: {len(teaching_content)} characters")
+        
+        try:
+            generated = genai_service.generate_activity(teaching_content, activity_type, num_questions)
+            logger.info(f"AI generation successful. Activity type: {generated.get('activity_type')}")
+        except Exception as gen_error:
+            logger.error(f"AI generation error: {gen_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'message': f'AI generation failed: {str(gen_error)}'
+            }), 500
         
         # Mark as AI generated
         generated['ai_generated'] = True
