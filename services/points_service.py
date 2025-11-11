@@ -171,41 +171,63 @@ class PointsService:
     def get_global_leaderboard(limit=100):
         """
         Get global leaderboard across all courses
+        Aggregates points from all courses for each unique student
         
         Args:
             limit (int): Maximum number of students to return
             
         Returns:
-            list: Ranked list of students with their points
+            list: Ranked list of students with their total points across all courses
         """
         try:
             # Get all students
             students = db_service.find_many(Student.COLLECTION_NAME, {})
             
-            leaderboard = []
+            # Dictionary to aggregate student data by student_id
+            student_aggregates = {}
             
             for student in students:
                 student_id = student.get('student_id')
                 student_name = student.get('name', 'Anonymous')
+                
+                # Skip if student_id is missing
+                if not student_id:
+                    continue
+                
+                # If student not in aggregates yet, initialize
+                if student_id not in student_aggregates:
+                    student_aggregates[student_id] = {
+                        'student_id': student_id,
+                        'name': student_name,
+                        'total_points': 0,
+                        'total_activities': 0,
+                        'courses': []
+                    }
+                
+                # Get course info
                 course_id = student.get('course_id')
+                if course_id:
+                    course = Course.find_by_id(course_id)
+                    course_name = course.get('name', 'Unknown') if course else 'Unknown'
+                    student_aggregates[student_id]['courses'].append(course_name)
                 
-                # Calculate points (all courses)
-                points_data = PointsService.calculate_student_points(student_id)
+                # Calculate points for this student in this course
+                points_data = PointsService.calculate_student_points(student_id, course_id)
+                student_aggregates[student_id]['total_points'] += points_data['total']
                 
-                # Count activities completed
-                activities_count = PointsService.count_student_activities(student_id)
-                
-                # Get course name
-                course = Course.find_by_id(course_id)
-                course_name = course.get('name', 'Unknown') if course else 'Unknown'
-                
+                # Count activities completed in this course
+                activities_count = PointsService.count_student_activities(student_id, course_id)
+                student_aggregates[student_id]['total_activities'] += activities_count
+            
+            # Convert dictionary to list
+            leaderboard = []
+            for student_id, data in student_aggregates.items():
                 leaderboard.append({
-                    '_id': student.get('_id'),
                     'student_id': student_id,
-                    'name': student_name,
-                    'course_name': course_name,
-                    'points': points_data['total'],
-                    'activities_completed': activities_count,
+                    'name': data['name'],
+                    'points': data['total_points'],
+                    'activities_completed': data['total_activities'],
+                    'courses_count': len(data['courses']),
                     'rank': 0  # Will be set after sorting
                 })
             

@@ -563,12 +563,14 @@ def leaderboard():
             logger.error(f"Error getting achievements: {e}")
             achievements = []
         
-        # Find student's global rank - use student_identifier
+        # Find student's global rank and points - use student_identifier
         my_global_rank = None
+        global_my_points = 0
         try:
             for i, entry in enumerate(global_leaderboard):
                 if entry.get('student_id') == student_identifier:
                     my_global_rank = i + 1
+                    global_my_points = entry.get('points', 0)
                     break
         except Exception as e:
             logger.error(f"Error finding global rank: {e}")
@@ -580,6 +582,7 @@ def leaderboard():
             global_leaderboard=global_leaderboard,
             my_course_ranks=my_course_ranks,
             my_global_rank=my_global_rank,
+            global_my_points=global_my_points,
             overall_points=overall_points,
             achievements=achievements
         )
