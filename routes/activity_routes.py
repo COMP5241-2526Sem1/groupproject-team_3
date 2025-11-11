@@ -231,15 +231,24 @@ def ai_generate_activity():
                 from services.document_service import extract_document_content, summarize_content
                 teaching_content = extract_document_content(file.filename, file_content)
                 
-                # Summarize if too long to avoid token limits
-                # For large files, be more aggressive with summarization
-                if len(file_content) > 5 * 1024 * 1024:  # Files larger than 5MB
-                    teaching_content = summarize_content(teaching_content, max_length=2000)
-                    logger.info(f"Large file detected, using shorter summary (2000 chars)")
-                else:
-                    teaching_content = summarize_content(teaching_content, max_length=3000)
+                # Use intelligent summarization that samples from entire document
+                # Adjust length based on number of questions requested
+                activity_type = request.form.get('type', 'short_answer').strip()
+                num_questions = int(request.form.get('num_questions', 1))
                 
-                logger.info(f"Extracted {len(teaching_content)} characters from {file.filename}")
+                # Calculate appropriate content length
+                # More questions need more context, but still keep it manageable
+                if activity_type == 'poll':
+                    # For poll: ~500 chars per question, max 6000
+                    max_content_length = min(500 * num_questions, 6000)
+                else:
+                    # For other types: 4000 chars is sufficient
+                    max_content_length = 4000
+                
+                teaching_content = summarize_content(teaching_content, max_length=max_content_length)
+                
+                logger.info(f"Extracted {len(teaching_content)} characters from {file.filename} (file size: {len(file_content)} bytes)")
+                logger.info(f"Activity type: {activity_type}, num_questions: {num_questions}")
                 
                 if not teaching_content or len(teaching_content) < 50:
                     return jsonify({
@@ -249,14 +258,14 @@ def ai_generate_activity():
                 
             except Exception as e:
                 logger.error(f"Document extraction error: {e}")
+                import traceback
+                traceback.print_exc()
                 return jsonify({
                     'success': False,
                     'message': f'Failed to extract content from file: {str(e)}'
                 }), 400
             
-            activity_type = request.form.get('type', 'short_answer').strip()
             course_id = request.form.get('course_id', '').strip()
-            num_questions = int(request.form.get('num_questions', 1))
             
         else:
             # Handle text content (original functionality)

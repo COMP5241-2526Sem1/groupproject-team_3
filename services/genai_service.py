@@ -65,42 +65,32 @@ class GenAIService:
             
             # Construct prompt based on activity type
             prompts = {
-                'poll': f"""Create EXACTLY {num_questions} poll question(s) for the topic: {teaching_content}
+                'poll': f"""Generate {num_questions} multiple-choice question(s) about: {teaching_content}
 
-IMPORTANT: You MUST generate exactly {num_questions} question(s). No more, no less.
+Requirements:
+- EXACTLY {num_questions} question(s)
+- Each has 4 options (A, B, C, D)
+- Specify correct answer and brief explanation (1 sentence)
 
-For each question, generate:
-1. A clear multiple choice question related to the topic
-2. Exactly 4 options (labeled A, B, C, D)
-3. The correct answer (specify which option: A, B, C, or D)
-4. A brief explanation (1-2 sentences) of why that answer is correct
-
-Return the response in valid JSON format:
+JSON format:
 {{
-    "title": "Quiz: [Topic Name]",
+    "title": "Quiz: [Topic]",
     "questions": [
         {{
-            "question": "Question text here?",
+            "question": "Question text?",
             "options": [
-                {{"label": "A", "text": "First option"}},
-                {{"label": "B", "text": "Second option"}},
-                {{"label": "C", "text": "Third option"}},
-                {{"label": "D", "text": "Fourth option"}}
+                {{"label": "A", "text": "Option A"}},
+                {{"label": "B", "text": "Option B"}},
+                {{"label": "C", "text": "Option C"}},
+                {{"label": "D", "text": "Option D"}}
             ],
             "correct_answer": "A",
-            "explanation": "Brief explanation of why option A is correct"
-        }},
-        ... (repeat for all {num_questions} questions)
+            "explanation": "Brief explanation."
+        }}
     ]
 }}
 
-CRITICAL REQUIREMENTS:
-- Generate EXACTLY {num_questions} questions in the "questions" array
-- Each question MUST have exactly 4 options (A, B, C, D)
-- correct_answer MUST be one of: A, B, C, or D
-- Make questions challenging but fair for university students
-- Ensure proper JSON formatting with correct brackets and commas
-- DO NOT add any text outside the JSON structure""",
+Generate {num_questions} questions now.""",
                 
                 'short_answer': f"""Create 3 short-answer questions for the topic: {teaching_content}
                 
@@ -142,14 +132,15 @@ Return the response in JSON format:
             # Each poll question needs ~150-200 tokens (question + 4 options + explanation)
             # Add buffer for JSON structure
             if activity_type == 'poll':
-                base_tokens = 200  # For JSON structure and title
-                tokens_per_question = 180  # Per question (reduced to be safer)
+                base_tokens = 300  # For JSON structure and title
+                tokens_per_question = 200  # Per question (question + options + explanation)
                 max_tokens = base_tokens + (num_questions * tokens_per_question)
-                # Cap at 3000 to avoid token limit issues with large inputs
-                max_tokens = min(max_tokens, 3000)
+                # Increase limit to allow for larger responses
+                # gpt-4o-mini supports up to 16,384 tokens output
+                max_tokens = min(max_tokens, 8000)
                 logger.info(f"Requesting {num_questions} poll questions with max_tokens={max_tokens}")
             else:
-                max_tokens = 1500  # Sufficient for other activity types
+                max_tokens = 2000  # Sufficient for other activity types
             
             # Call OpenAI API
             # Use lower temperature for poll questions to ensure consistent formatting
@@ -159,12 +150,12 @@ Return the response in JSON format:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
-                        {"role": "system", "content": "You are an expert educational content creator for university lecturers in Hong Kong. Generate high-quality learning activities in English. Always return valid JSON format."},
+                        {"role": "system", "content": "You are an expert educational content creator. Generate concise, high-quality learning activities in valid JSON format. Be efficient with words while maintaining clarity."},
                         {"role": "user", "content": prompt}
                     ],
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    timeout=self.timeout
+                    timeout=60  # Increase timeout for large responses
                 )
             except Exception as api_error:
                 logger.error(f"OpenAI API error: {api_error}")

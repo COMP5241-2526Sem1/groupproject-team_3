@@ -117,7 +117,8 @@ def extract_document_content(filename: str, file_content: bytes) -> str:
 
 def summarize_content(text: str, max_length: int = 3000) -> str:
     """
-    Summarize or truncate content to fit within AI token limits
+    Intelligently summarize or truncate content to fit within AI token limits
+    Prioritizes keeping the most important content from beginning, middle, and end
     
     Args:
         text (str): Full text content
@@ -129,13 +130,65 @@ def summarize_content(text: str, max_length: int = 3000) -> str:
     if len(text) <= max_length:
         return text
     
-    # Truncate to max_length and add ellipsis
+    # For very long content, take samples from beginning, middle, and end
+    # to ensure comprehensive coverage
+    if len(text) > max_length * 3:
+        # Take 40% from beginning, 30% from middle, 30% from end
+        start_length = int(max_length * 0.4)
+        middle_length = int(max_length * 0.3)
+        end_length = int(max_length * 0.3)
+        
+        start_text = text[:start_length]
+        middle_start = len(text) // 2 - middle_length // 2
+        middle_text = text[middle_start:middle_start + middle_length]
+        end_text = text[-end_length:]
+        
+        # Clean up at sentence boundaries
+        start_text = _cut_at_boundary(start_text, from_end=True)
+        middle_text = _cut_at_boundary(middle_text, from_start=True)
+        middle_text = _cut_at_boundary(middle_text, from_end=True)
+        end_text = _cut_at_boundary(end_text, from_start=True)
+        
+        return f"{start_text}\n\n[... content from middle section ...]\n\n{middle_text}\n\n[... content from end section ...]\n\n{end_text}"
+    
+    # For moderately long content, just truncate at a good boundary
     truncated = text[:max_length]
+    truncated = _cut_at_boundary(truncated, from_end=True)
     
-    # Try to cut at a sentence or paragraph boundary
-    for delimiter in ['\n\n', '\n', '. ', ' ']:
-        last_index = truncated.rfind(delimiter)
-        if last_index > max_length * 0.9:  # Within 10% of max length
-            return truncated[:last_index] + delimiter + "... (content truncated)"
+    return truncated + "\n\n... (content continues)"
+
+
+def _cut_at_boundary(text: str, from_start: bool = False, from_end: bool = False) -> str:
+    """
+    Cut text at a natural boundary (paragraph, sentence, or space)
     
-    return truncated + "... (content truncated)"
+    Args:
+        text (str): Text to cut
+        from_start (bool): If True, cut from the start to first boundary
+        from_end (bool): If True, cut from the end to last boundary
+        
+    Returns:
+        str: Text cut at boundary
+    """
+    if not text:
+        return text
+    
+    boundaries = ['\n\n', '\n', '. ', '。', '! ', '！', '? ', '？', ' ']
+    
+    if from_end:
+        # Find last boundary and cut there
+        for delimiter in boundaries:
+            last_index = text.rfind(delimiter)
+            if last_index > len(text) * 0.85:  # Within last 15%
+                return text[:last_index + len(delimiter)]
+        return text
+    
+    if from_start:
+        # Find first boundary and cut there
+        for delimiter in boundaries:
+            first_index = text.find(delimiter)
+            if first_index > 0 and first_index < len(text) * 0.15:  # Within first 15%
+                return text[first_index + len(delimiter):]
+        return text
+    
+    return text
