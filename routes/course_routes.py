@@ -379,7 +379,7 @@ def delete_course(course_id):
 @login_required
 def teacher_profile():
     """
-    View and edit teacher profile
+    View and edit teacher profile (settings page)
     """
     try:
         from models.user import User
@@ -389,29 +389,7 @@ def teacher_profile():
         if not user:
             return render_template('error.html', message='User not found'), 404
         
-        # Get teacher statistics
-        courses = Course.find_by_teacher(user_id)
-        total_courses = len(courses)
-        
-        # Count total students across all courses
-        total_students = 0
-        for course in courses:
-            course_id = str(course['_id'])
-            total_students += Student.count_by_course(course_id)
-        
-        # Count total activities
-        total_activities = 0
-        for course in courses:
-            course_id = str(course['_id'])
-            activities = Activity.find_by_course(course_id)
-            total_activities += len(activities)
-        
-        return render_template('teacher/profile.html',
-            user=user,
-            total_courses=total_courses,
-            total_students=total_students,
-            total_activities=total_activities
-        )
+        return render_template('teacher/profile.html', user=user)
         
     except Exception as e:
         logger.error(f"Error loading teacher profile: {e}")

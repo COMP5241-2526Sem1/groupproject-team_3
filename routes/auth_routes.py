@@ -161,26 +161,6 @@ def logout():
     logger.info(f"User logged out: {username}")
     return redirect(url_for('auth.login'))
 
-@auth_bp.route('/profile')
-def profile():
-    """
-    View user profile
-    Redirects to appropriate profile page based on role
-    """
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    
-    # Redirect based on user role
-    role = session.get('role')
-    if role == 'student':
-        return redirect(url_for('student.profile'))
-    elif role == 'teacher':
-        return redirect(url_for('course.teacher_profile'))
-    elif role == 'admin':
-        return redirect(url_for('admin.admin_dashboard'))
-    else:
-        return redirect(url_for('auth.logout'))
-
 @auth_bp.route('/change-password', methods=['POST'])
 def change_password():
     """
