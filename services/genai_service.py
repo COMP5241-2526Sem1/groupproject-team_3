@@ -65,64 +65,49 @@ class GenAIService:
             
             # Construct prompt based on activity type
             prompts = {
-                'poll': f"""Generate {num_questions} multiple-choice question(s) about: {teaching_content}
+                'poll': f"""Create {num_questions} quiz question(s) from this content:
 
-Requirements:
-- EXACTLY {num_questions} question(s)
-- Each has 4 options (A, B, C, D)
-- Specify correct answer and brief explanation (1 sentence)
+{teaching_content}
 
-JSON format:
+JSON format (exactly {num_questions} questions):
 {{
     "title": "Quiz: [Topic]",
     "questions": [
         {{
-            "question": "Question text?",
+            "question": "Question?",
             "options": [
-                {{"label": "A", "text": "Option A"}},
-                {{"label": "B", "text": "Option B"}},
-                {{"label": "C", "text": "Option C"}},
-                {{"label": "D", "text": "Option D"}}
+                {{"label": "A", "text": "..."}},
+                {{"label": "B", "text": "..."}},
+                {{"label": "C", "text": "..."}},
+                {{"label": "D", "text": "..."}}
             ],
             "correct_answer": "A",
-            "explanation": "Brief explanation."
+            "explanation": "Why A is correct."
         }}
     ]
-}}
-
-Generate {num_questions} questions now.""",
+}}""",
                 
-                'short_answer': f"""Create 3 short-answer questions for the topic: {teaching_content}
-                
-For each question, include:
-1. A clear question that tests understanding
-2. Key points that should be in a good answer
-3. Word limit suggestion (50-200 words)
+                'short_answer': f"""Create 3 questions from: {teaching_content}
 
-Return the response in JSON format:
+JSON format:
 {{
     "questions": [
         {{
-            "question": "Question text",
-            "key_points": ["Point 1", "Point 2", "Point 3"],
+            "question": "...",
+            "key_points": ["...", "...", "..."],
             "word_limit": 150
         }}
     ]
 }}""",
                 
-                'word_cloud': f"""Create a word cloud activity for the topic: {teaching_content}
-                
-Generate:
-1. A prompt question that will elicit key terms
-2. 5-8 expected keywords related to the topic
-3. Instructions for students
+                'word_cloud': f"""Create word cloud activity from: {teaching_content}
 
-Return the response in JSON format:
+JSON format:
 {{
-    "title": "Word Cloud Title",
-    "question": "What words come to mind when you think about...",
-    "expected_keywords": ["keyword1", "keyword2", "keyword3"],
-    "instructions": "Enter single words or short phrases"
+    "title": "...",
+    "question": "...",
+    "expected_keywords": ["...", "...", "..."],
+    "instructions": "..."
 }}"""
             }
             
@@ -164,7 +149,18 @@ Return the response in JSON format:
             
             # Parse response
             content = response.choices[0].message.content
-            logger.info(f"Generated activity for topic: {teaching_content}, num_questions: {num_questions}")
+            finish_reason = response.choices[0].finish_reason
+            
+            logger.info(f"AI response - Length: {len(content)} chars, Finish reason: {finish_reason}")
+            
+            # Check if response was cut off
+            if finish_reason == 'length':
+                logger.warning(f"Response was truncated due to token limit! Content length: {len(content)}")
+                logger.warning("Reducing content or question count recommended")
+            
+            # Log first and last 100 chars to debug
+            logger.debug(f"Response start: {content[:100]}")
+            logger.debug(f"Response end: {content[-100:]}")
             
             # Extract JSON from response
             if '```json' in content:
@@ -172,9 +168,18 @@ Return the response in JSON format:
             elif '```' in content:
                 content = content.split('```')[1].split('```')[0].strip()
             
-            result = json.loads(content)
+            # Try to parse JSON
+            try:
+                result = json.loads(content)
+            except json.JSONDecodeError as json_err:
+                logger.error(f"JSON decode error: {json_err}")
+                logger.error(f"Content preview (first 500 chars): {content[:500]}")
+                logger.error(f"Content preview (last 500 chars): {content[-500:]}")
+                # If JSON is invalid, try to fix common issues or return fallback
+                raise json_err
+            
             result['activity_type'] = activity_type
-            result['source_content'] = teaching_content
+            result['source_content'] = teaching_content[:100] + "..." if len(teaching_content) > 100 else teaching_content
             
             # Validate poll question count for multi-question polls
             if activity_type == 'poll' and num_questions > 1:

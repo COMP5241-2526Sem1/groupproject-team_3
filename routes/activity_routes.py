@@ -241,19 +241,27 @@ def ai_generate_activity():
                 activity_type = request.form.get('type', 'short_answer').strip()
                 num_questions = int(request.form.get('num_questions', 1))
                 
-                # Calculate appropriate content length
-                # More questions need more context, but still keep it manageable
+                # CRITICAL: Reduce input content significantly for large files
+                # to leave enough space for AI output (especially for polls)
+                # Calculate appropriate content length based on activity type
                 if activity_type == 'poll':
-                    # For poll: ~500 chars per question, max 6000
-                    max_content_length = min(500 * num_questions, 6000)
+                    # For poll: Much shorter input needed because output is long
+                    # Each question generates ~200 tokens output
+                    # Limit input to allow full output generation
+                    if num_questions <= 3:
+                        max_content_length = 2500  # ~600 tokens input, leaves room for 3 questions
+                    elif num_questions <= 5:
+                        max_content_length = 2000  # ~500 tokens input, leaves room for 5 questions
+                    else:
+                        max_content_length = 1500  # ~400 tokens input, leaves room for 10 questions
                 else:
-                    # For other types: 4000 chars is sufficient
-                    max_content_length = 4000
+                    # For other types: 3000 chars is sufficient (output is shorter)
+                    max_content_length = 3000
                 
                 teaching_content = summarize_content(teaching_content, max_length=max_content_length)
                 
                 logger.info(f"Extracted {len(teaching_content)} characters from {file.filename} (file size: {len(file_content)} bytes)")
-                logger.info(f"Activity type: {activity_type}, num_questions: {num_questions}")
+                logger.info(f"Activity type: {activity_type}, num_questions: {num_questions}, content_length: {len(teaching_content)}")
                 
                 if not teaching_content or len(teaching_content) < 50:
                     return jsonify({
