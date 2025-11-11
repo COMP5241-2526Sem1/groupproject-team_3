@@ -163,15 +163,72 @@ def create_activity():
 def ai_generate_activity():
     """
     Generate activity using AI
-    Uses GPT-4 to create activity based on teaching content
+    Uses GPT-4 to create activity based on teaching content or uploaded document
     """
     try:
-        data = request.get_json() if request.is_json else request.form
+        # Check if this is a file upload or text content
+        content_source = request.form.get('content_source', 'text')
+        teaching_content = ''
         
-        teaching_content = data.get('teaching_content', '').strip()
-        activity_type = data.get('type', 'short_answer').strip()
-        course_id = data.get('course_id', '').strip()
-        num_questions = int(data.get('num_questions', 1))
+        if content_source == 'file' and 'course_file' in request.files:
+            # Handle file upload
+            file = request.files['course_file']
+            
+            if file.filename == '':
+                return jsonify({
+                    'success': False,
+                    'message': 'No file selected'
+                }), 400
+            
+            # Check file extension
+            allowed_extensions = {'.pdf', '.ppt', '.pptx'}
+            file_ext = '.' + file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+            
+            if file_ext not in allowed_extensions:
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid file format. Only PDF and PowerPoint files are supported.'
+                }), 400
+            
+            # Read file content
+            file_content = file.read()
+            
+            # Check file size (10MB limit)
+            max_size = 10 * 1024 * 1024
+            if len(file_content) > max_size:
+                return jsonify({
+                    'success': False,
+                    'message': 'File size exceeds 10MB limit'
+                }), 400
+            
+            # Extract text from document
+            try:
+                from services.document_service import extract_document_content, summarize_content
+                teaching_content = extract_document_content(file.filename, file_content)
+                
+                # Summarize if too long to avoid token limits
+                teaching_content = summarize_content(teaching_content, max_length=3000)
+                
+                logger.info(f"Extracted {len(teaching_content)} characters from {file.filename}")
+                
+            except Exception as e:
+                logger.error(f"Document extraction error: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Failed to extract content from file: {str(e)}'
+                }), 400
+            
+            activity_type = request.form.get('type', 'short_answer').strip()
+            course_id = request.form.get('course_id', '').strip()
+            num_questions = int(request.form.get('num_questions', 1))
+            
+        else:
+            # Handle text content (original functionality)
+            data = request.get_json() if request.is_json else request.form
+            teaching_content = data.get('teaching_content', '').strip()
+            activity_type = data.get('type', 'short_answer').strip()
+            course_id = data.get('course_id', '').strip()
+            num_questions = int(data.get('num_questions', 1))
         
         if not teaching_content:
             return jsonify({
@@ -194,7 +251,7 @@ def ai_generate_activity():
             }), 403
         
         # Generate activity using AI
-        logger.info(f"Generating AI activity for: {teaching_content} ({activity_type}, {num_questions} questions)")
+        logger.info(f"Generating AI activity for: {teaching_content[:100]}... ({activity_type}, {num_questions} questions)")
         generated = genai_service.generate_activity(teaching_content, activity_type, num_questions)
         
         # Mark as AI generated
@@ -210,9 +267,11 @@ def ai_generate_activity():
         
     except Exception as e:
         logger.error(f"AI generate activity error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'message': 'Failed to generate activity. Please try again.'
+            'message': f'Failed to generate activity: {str(e)}'
         }), 500
 
 @activity_bp.route('/activity/<activity_id>')

@@ -127,7 +127,7 @@
             
             <!-- AI Generation Form -->
             <div id="aiForm" style="display: none;">
-                <form id="aiGenerateForm">
+                <form id="aiGenerateForm" enctype="multipart/form-data">
                     <div class="form-group">
                         <label class="form-label">Course *</label>
                         <select name="course_id" class="form-control" required>
@@ -157,12 +157,52 @@
                         </small>
                     </div>
                     
+                    <!-- Content Input Method Selection -->
                     <div class="form-group">
+                        <label class="form-label">Content Source *</label>
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <label style="cursor: pointer;">
+                                <input type="radio" name="content_source" value="text" checked onchange="toggleContentSource()">
+                                📝 Enter Text
+                            </label>
+                            <label style="cursor: pointer;">
+                                <input type="radio" name="content_source" value="file" onchange="toggleContentSource()">
+                                📎 Upload File (PDF/PPT)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Text Input -->
+                    <div id="textContentGroup" class="form-group">
                         <label class="form-label">Teaching Content / Keywords *</label>
-                        <textarea name="teaching_content" class="form-control" rows="5" required
+                        <textarea name="teaching_content" id="teaching_content" class="form-control" rows="5"
                                   placeholder="e.g., TCP/IP protocol, computer networks, three-way handshake"></textarea>
                         <small style="color: #6b7280;">
                             Describe the topic or enter resource keywords. AI will generate activity suggestions.
+                        </small>
+                    </div>
+                    
+                    <!-- File Upload -->
+                    <div id="fileContentGroup" class="form-group" style="display: none;">
+                        <label class="form-label">Upload Course Material *</label>
+                        <div style="border: 2px dashed #d1d5db; border-radius: 8px; padding: 2rem; text-align: center; background: #f9fafb;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
+                            <input type="file" name="course_file" id="course_file" accept=".pdf,.ppt,.pptx" 
+                                   style="display: none;" onchange="handleFileSelect(this)">
+                            <label for="course_file" class="btn btn-primary" style="cursor: pointer;">
+                                Choose File
+                            </label>
+                            <p style="margin-top: 1rem; color: #6b7280; font-size: 0.875rem;">
+                                Supported formats: PDF, PPT, PPTX (Max 10MB)
+                            </p>
+                            <div id="fileInfo" style="margin-top: 1rem; display: none;">
+                                <p style="color: #059669; font-weight: 600;">
+                                    <span id="fileName"></span> (<span id="fileSize"></span>)
+                                </p>
+                            </div>
+                        </div>
+                        <small style="color: #6b7280; display: block; margin-top: 0.5rem;">
+                            AI will extract content from your file and generate activities based on the material.
                         </small>
                     </div>
                     
@@ -195,6 +235,67 @@
 <script>
 let currentMethod = null;
 let aiGeneratedData = null;
+
+// Toggle between text and file content source
+function toggleContentSource() {
+    const source = document.querySelector('input[name="content_source"]:checked').value;
+    const textGroup = document.getElementById('textContentGroup');
+    const fileGroup = document.getElementById('fileContentGroup');
+    const textArea = document.getElementById('teaching_content');
+    
+    if (source === 'text') {
+        textGroup.style.display = 'block';
+        fileGroup.style.display = 'none';
+        textArea.required = true;
+        document.getElementById('course_file').required = false;
+    } else {
+        textGroup.style.display = 'none';
+        fileGroup.style.display = 'block';
+        textArea.required = false;
+        document.getElementById('course_file').required = true;
+    }
+}
+
+// Handle file selection
+function handleFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    // Check file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+        showAlert('File size exceeds 10MB limit', 'danger');
+        input.value = '';
+        return;
+    }
+    
+    // Check file type
+    const allowedTypes = ['.pdf', '.ppt', '.pptx'];
+    const fileName = file.name.toLowerCase();
+    const isAllowed = allowedTypes.some(type => fileName.endsWith(type));
+    
+    if (!isAllowed) {
+        showAlert('Please upload a PDF or PowerPoint file', 'danger');
+        input.value = '';
+        return;
+    }
+    
+    // Display file info
+    const fileInfo = document.getElementById('fileInfo');
+    const fileNameSpan = document.getElementById('fileName');
+    const fileSizeSpan = document.getElementById('fileSize');
+    
+    fileNameSpan.textContent = file.name;
+    fileSizeSpan.textContent = formatFileSize(file.size);
+    fileInfo.style.display = 'block';
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
 
 function selectMethod(method) {
     currentMethod = method;
@@ -270,17 +371,53 @@ document.getElementById('aiGenerateForm').addEventListener('submit', async (e) =
     e.preventDefault();
     
     const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
+    const contentSource = formData.get('content_source');
+    
+    // Validate content source
+    if (contentSource === 'text' && !formData.get('teaching_content').trim()) {
+        showAlert('Please enter teaching content', 'danger');
+        return;
+    }
+    
+    if (contentSource === 'file' && !formData.get('course_file').name) {
+        showAlert('Please select a file', 'danger');
+        return;
+    }
     
     showLoading();
     
     try {
-        const result = await apiCall('{{ url_for("activity.ai_generate_activity") }}', 'POST', data);
+        // Use FormData for file upload, regular fetch for text
+        let response;
+        if (contentSource === 'file') {
+            response = await fetch('{{ url_for("activity.ai_generate_activity") }}', {
+                method: 'POST',
+                body: formData  // Send FormData directly for file upload
+            });
+        } else {
+            // For text content, use JSON
+            const data = {
+                course_id: formData.get('course_id'),
+                type: formData.get('type'),
+                num_questions: formData.get('num_questions') || 1,
+                teaching_content: formData.get('teaching_content'),
+                content_source: 'text'
+            };
+            response = await fetch('{{ url_for("activity.ai_generate_activity") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+        }
+        
+        const result = await response.json();
         hideLoading();
         
         if (result.success) {
             aiGeneratedData = result.generated_content;
-            aiGeneratedData.course_id = data.course_id;
+            aiGeneratedData.course_id = formData.get('course_id');
             displayAIPreview(result.generated_content);
             document.getElementById('aiPreview').style.display = 'block';
         } else {
@@ -288,7 +425,8 @@ document.getElementById('aiGenerateForm').addEventListener('submit', async (e) =
         }
     } catch (error) {
         hideLoading();
-        showAlert('Failed to generate activity', 'danger');
+        showAlert('Failed to generate activity: ' + error.message, 'danger');
+        console.error(error);
     }
 });
 
