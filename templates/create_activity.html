@@ -194,6 +194,19 @@
                     <!-- File Upload -->
                     <div id="fileContentGroup" class="form-group" style="display: none;">
                         <label class="form-label">Upload Course Material *</label>
+                        
+                        <!-- File Size Warning -->
+                        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <p style="margin: 0; color: #92400e; font-weight: 600;">
+                                ⚠️ File Size Recommendation
+                            </p>
+                            <p style="margin: 0.5rem 0 0 0; color: #78350f; font-size: 0.875rem;">
+                                <strong>Recommended:</strong> 1-2 MB (most stable)<br>
+                                <strong>Maximum:</strong> 3 MB<br>
+                                Larger files may cause AI generation to fail due to content complexity.
+                            </p>
+                        </div>
+                        
                         <div style="border: 2px dashed #d1d5db; border-radius: 8px; padding: 2rem; text-align: center; background: #f9fafb;">
                             <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
                             <input type="file" name="course_file" id="course_file" accept=".pdf,.ppt,.pptx" 
@@ -202,16 +215,17 @@
                                 Choose File
                             </label>
                             <p style="margin-top: 1rem; color: #6b7280; font-size: 0.875rem;">
-                                Supported formats: PDF, PPT, PPTX (Max 10MB)
+                                Supported formats: PDF, PPT, PPTX<br>
+                                <strong style="color: #dc2626;">Recommended: 1-2 MB | Maximum: 3 MB</strong>
                             </p>
                             <div id="fileInfo" style="margin-top: 1rem; display: none;">
-                                <p style="color: #059669; font-weight: 600;">
+                                <p id="fileInfoText" style="font-weight: 600;">
                                     <span id="fileName"></span> (<span id="fileSize"></span>)
                                 </p>
                             </div>
                         </div>
                         <small style="color: #6b7280; display: block; margin-top: 0.5rem;">
-                            AI will extract content from your file and generate activities based on the material.
+                            AI will extract key content from your file. For files larger than 2MB, consider splitting into smaller sections for better results.
                         </small>
                     </div>
                     
@@ -283,10 +297,14 @@ function handleFileSelect(input) {
     const file = input.files[0];
     if (!file) return;
     
-    // Check file size (10MB limit)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // File size limits
+    const maxSize = 10 * 1024 * 1024; // 10MB hard limit
+    const recommendedSize = 2 * 1024 * 1024; // 2MB recommended
+    const warningSize = 3 * 1024 * 1024; // 3MB warning threshold
+    
+    // Check file size - hard limit
     if (file.size > maxSize) {
-        showAlert('File size exceeds 10MB limit', 'danger');
+        showAlert('File size exceeds 10MB limit. Please choose a smaller file.', 'danger');
         input.value = '';
         return;
     }
@@ -302,13 +320,39 @@ function handleFileSelect(input) {
         return;
     }
     
-    // Display file info
+    // Display file info with size warning
     const fileInfo = document.getElementById('fileInfo');
+    const fileInfoText = document.getElementById('fileInfoText');
     const fileNameSpan = document.getElementById('fileName');
     const fileSizeSpan = document.getElementById('fileSize');
     
     fileNameSpan.textContent = file.name;
     fileSizeSpan.textContent = formatFileSize(file.size);
+    
+    // Color code based on file size
+    if (file.size > warningSize) {
+        fileInfoText.style.color = '#dc2626'; // Red
+        fileInfoText.innerHTML = `
+            <span id="fileName">${file.name}</span> 
+            (<span id="fileSize">${formatFileSize(file.size)}</span>)<br>
+            <small style="font-weight: normal;">⚠️ Warning: File larger than 3MB may cause generation issues. Consider using a smaller file.</small>
+        `;
+    } else if (file.size > recommendedSize) {
+        fileInfoText.style.color = '#f59e0b'; // Orange
+        fileInfoText.innerHTML = `
+            <span id="fileName">${file.name}</span> 
+            (<span id="fileSize">${formatFileSize(file.size)}</span>)<br>
+            <small style="font-weight: normal;">⚠️ File size OK, but smaller files (1-2MB) work better.</small>
+        `;
+    } else {
+        fileInfoText.style.color = '#059669'; // Green
+        fileInfoText.innerHTML = `
+            <span id="fileName">${file.name}</span> 
+            (<span id="fileSize">${formatFileSize(file.size)}</span>)<br>
+            <small style="font-weight: normal;">✅ Good file size for AI generation!</small>
+        `;
+    }
+    
     fileInfo.style.display = 'block';
 }
 

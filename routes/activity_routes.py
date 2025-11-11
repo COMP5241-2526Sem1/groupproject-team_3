@@ -223,13 +223,22 @@ def ai_generate_activity():
             # Read file content
             file_content = file.read()
             
-            # Check file size (10MB limit)
-            max_size = 10 * 1024 * 1024
+            # Check file size with detailed messages
+            max_size = 10 * 1024 * 1024  # 10MB hard limit
+            recommended_size = 2 * 1024 * 1024  # 2MB recommended
+            warning_size = 3 * 1024 * 1024  # 3MB warning
+            
+            file_size_mb = len(file_content) / (1024 * 1024)
+            
             if len(file_content) > max_size:
                 return jsonify({
                     'success': False,
-                    'message': 'File size exceeds 10MB limit'
+                    'message': f'File size ({file_size_mb:.1f}MB) exceeds 10MB limit. Please use a smaller file.'
                 }), 400
+            
+            # Log warning for large files
+            if len(file_content) > warning_size:
+                logger.warning(f"Large file uploaded: {file_size_mb:.1f}MB. Recommended size is 1-2MB for best results.")
             
             # Extract text from document
             try:
