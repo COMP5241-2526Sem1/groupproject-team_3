@@ -73,6 +73,19 @@
                 🤖 This activity was generated with AI assistance
             </p>
             {% endif %}
+            
+            {% if deadline_display %}
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 4px; margin-top: 1rem;">
+                <p style="margin: 0; font-size: 0.875rem; {% if is_expired %}color: #dc2626;{% else %}color: #f59e0b;{% endif %}">
+                    <strong>ℹ️ Teacher Info:</strong> Deadline is {{ deadline_display.strftime('%Y-%m-%d %H:%M') }} (HKT)
+                    {% if is_expired %}
+                    <span style="background: #dc2626; color: white; padding: 0.125rem 0.5rem; border-radius: 4px; margin-left: 0.5rem;">Expired</span>
+                    {% endif %}
+                    <br>
+                    <em>Note: Deadlines only affect students. Teachers can view and manage activities anytime.</em>
+                </p>
+            </div>
+            {% endif %}
         </div>
     </div>
     

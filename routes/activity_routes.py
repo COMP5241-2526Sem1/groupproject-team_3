@@ -8,6 +8,7 @@ from models.activity import Activity
 from models.course import Course
 from services.genai_service import genai_service
 from bson import ObjectId
+from datetime import datetime, timedelta
 import logging
 
 # Configure logging
@@ -423,6 +424,14 @@ def activity_detail(activity_id):
         # Just pass whether grouping is available
         has_grouped_answers = activity.get('grouped_answers') is not None
         
+        # Add deadline info for teacher (info only, doesn't restrict teacher access)
+        is_expired = Activity.is_expired(activity)
+        deadline_display = None
+        if activity.get('deadline'):
+            utc_deadline = activity['deadline']
+            hk_deadline = utc_deadline + timedelta(hours=8)
+            deadline_display = hk_deadline
+        
         print("DEBUG: Rendering template...")
         return render_template(
             'activity_detail.html',
@@ -431,7 +440,9 @@ def activity_detail(activity_id):
             response_count=response_count,
             enrolled_count=enrolled_count,
             participation_rate=participation_rate,
-            has_grouped_answers=has_grouped_answers
+            has_grouped_answers=has_grouped_answers,
+            is_expired=is_expired,
+            deadline_display=deadline_display
         )
         
     except Exception as e:

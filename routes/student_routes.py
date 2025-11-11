@@ -11,6 +11,7 @@ from models.activity import Activity
 from models.student import Student
 from services.db_service import db_service
 from bson import ObjectId
+from datetime import datetime, timedelta
 import logging
 
 # Configure logging
@@ -72,6 +73,15 @@ def dashboard():
                                            if r.get('student_id') == user.get('student_id')), None)
                     is_completed = student_response is not None
                     
+                    # Check if activity is expired
+                    is_expired = Activity.is_expired(activity)
+                    
+                    # Convert deadline to HK time for display
+                    if activity.get('deadline'):
+                        utc_deadline = activity['deadline']
+                        hk_deadline = utc_deadline + timedelta(hours=8)
+                        activity['deadline_display'] = hk_deadline
+                    
                     if is_completed:
                         course_completed += 1
                         completed_activities += 1
@@ -81,6 +91,7 @@ def dashboard():
                         activity['course_name'] = course.get('name')
                         activity['course_code'] = course.get('code')
                         activity['completed'] = is_completed
+                        activity['is_expired'] = is_expired
                         recent_activities.append(activity)
                 
                 course['activity_count'] = len(activities)
@@ -150,6 +161,13 @@ def course_detail(course_id):
                                       r.get('student_name') == username), None)
             activity['student_response'] = student_response
             activity['has_responded'] = student_response is not None
+            
+            # Check if activity is expired and convert deadline to HK time
+            activity['is_expired'] = Activity.is_expired(activity)
+            if activity.get('deadline'):
+                utc_deadline = activity['deadline']
+                hk_deadline = utc_deadline + timedelta(hours=8)
+                activity['deadline_display'] = hk_deadline
         
         # Get teacher info
         teacher = User.find_by_id(course.get('teacher_id'))
@@ -466,9 +484,17 @@ def my_activities():
                 student_response = next((r for r in responses 
                                        if r.get('student_id') == user.get('student_id')), None)
                 
+                # Check if expired and convert deadline to HK time
+                is_expired = Activity.is_expired(activity)
+                if activity.get('deadline'):
+                    utc_deadline = activity['deadline']
+                    hk_deadline = utc_deadline + timedelta(hours=8)
+                    activity['deadline_display'] = hk_deadline
+                
                 activity['course_name'] = course.get('name')
                 activity['course_code'] = course.get('code')
                 activity['completed'] = student_response is not None
+                activity['is_expired'] = is_expired
                 activity['response_count'] = len(responses)
                 all_activities.append(activity)
         

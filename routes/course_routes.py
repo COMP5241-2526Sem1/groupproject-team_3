@@ -8,6 +8,7 @@ from models.course import Course
 from models.student import Student
 from models.activity import Activity
 from bson import ObjectId
+from datetime import datetime, timedelta
 import csv
 import io
 import logging
@@ -139,6 +140,13 @@ def course_detail(course_id):
         for activity in activities:
             activity['_id'] = str(activity['_id'])
             activity['response_count'] = len(activity.get('responses', []))
+            
+            # Add deadline info for teacher (info only, doesn't restrict access)
+            activity['is_expired'] = Activity.is_expired(activity)
+            if activity.get('deadline'):
+                utc_deadline = activity['deadline']
+                hk_deadline = utc_deadline + timedelta(hours=8)
+                activity['deadline_display'] = hk_deadline
         
         return render_template(
             'course_detail.html',

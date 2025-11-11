@@ -46,6 +46,13 @@
                             {% elif activity.content.get('prompt') %}
                             <small>{{ activity.content.get('prompt')[:80] }}...</small>
                             {% endif %}
+                            {% if activity.deadline_display %}
+                            <br>
+                            <small style="{% if activity.is_expired %}color: #dc2626;{% else %}color: #f59e0b;{% endif %}">
+                                ⏰ {% if activity.is_expired %}Expired{% else %}Due{% endif %}: 
+                                {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') }} (HKT)
+                            </small>
+                            {% endif %}
                         </td>
                         <td>
                             <span class="activity-type activity-{{ activity.type }}">
@@ -58,6 +65,8 @@
                         <td>
                             {% if activity.has_responded %}
                             <span class="badge badge-success">✅ Completed</span>
+                            {% elif activity.is_expired %}
+                            <span class="badge" style="background: #dc2626; color: white;">🔒 Expired</span>
                             {% else %}
                             <span class="badge badge-warning">⏳ Pending</span>
                             {% endif %}
@@ -66,6 +75,8 @@
                             {% if activity.has_responded %}
                             <a href="{{ url_for('student.view_activity', activity_id=activity._id) }}" 
                                class="btn btn-sm">View Response</a>
+                            {% elif activity.is_expired %}
+                            <button class="btn btn-sm" disabled style="opacity: 0.5;">Expired</button>
                             {% else %}
                             <a href="{{ url_for('student.view_activity', activity_id=activity._id) }}" 
                                class="btn btn-primary btn-sm">Participate</a>

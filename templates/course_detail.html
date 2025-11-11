@@ -97,6 +97,15 @@
                     </p>
                     {% endif %}
                     
+                    {% if activity.deadline_display %}
+                    <p style="font-size: 0.875rem; margin: 0.5rem 0; {% if activity.is_expired %}color: #dc2626;{% else %}color: #f59e0b;{% endif %}">
+                        ⏰ Deadline: {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') }} (HKT)
+                        {% if activity.is_expired %}
+                        <span style="background: #dc2626; color: white; padding: 0.125rem 0.5rem; border-radius: 4px; margin-left: 0.5rem;">Expired</span>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                    
                     <div class="flex gap-2 mt-3">
                         <a href="{{ url_for('activity.activity_detail', activity_id=activity._id) }}" 
                            class="btn btn-primary btn-sm">

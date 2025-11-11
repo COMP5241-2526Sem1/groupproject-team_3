@@ -32,6 +32,13 @@
                     <tr class="activity-row {% if activity.completed %}completed{% endif %}">
                         <td>
                             <strong>{{ activity.title }}</strong>
+                            {% if activity.deadline_display %}
+                            <br>
+                            <small style="{% if activity.is_expired %}color: #dc2626;{% else %}color: #f59e0b;{% endif %}">
+                                ⏰ {% if activity.is_expired %}Expired{% else %}Due{% endif %}: 
+                                {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') }} (HKT)
+                            </small>
+                            {% endif %}
                         </td>
                         <td>
                             <span class="course-badge">{{ activity.course_code }}</span>
@@ -52,6 +59,8 @@
                         <td>
                             {% if activity.completed %}
                                 <span class="status-badge status-complete">✅ Completed</span>
+                            {% elif activity.is_expired %}
+                                <span class="status-badge" style="background: #dc2626; color: white;">🔒 Expired</span>
                             {% else %}
                                 <span class="status-badge status-pending">⏳ Pending</span>
                             {% endif %}
@@ -62,6 +71,10 @@
                                    class="btn btn-sm btn-outline">
                                     View
                                 </a>
+                            {% elif activity.is_expired %}
+                                <button class="btn btn-sm btn-outline" disabled style="opacity: 0.5;">
+                                    Expired
+                                </button>
                             {% else %}
                                 <a href="{{ url_for('student.view_activity', activity_id=activity._id) }}" 
                                    class="btn btn-sm btn-primary">
