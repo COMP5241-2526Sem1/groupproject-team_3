@@ -177,7 +177,7 @@ def profile():
     elif role == 'teacher':
         return redirect(url_for('course.teacher_profile'))
     elif role == 'admin':
-        return redirect(url_for('admin.dashboard'))
+        return redirect(url_for('admin.admin_dashboard'))
     else:
         return redirect(url_for('auth.logout'))
 
