@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Management - Admin{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 2rem;">
+    <!-- Header -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h1>📝 Activity Management</h1>
+            <p style="color: #6b7280; margin: 0.5rem 0 0 0;">View and manage all activities in the system</p>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="grid grid-3">
+                <div>
+                    <label class="form-label">Search</label>
+                    <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search activities..." onkeyup="filterActivities()">
+                </div>
+                <div>
+                    <label class="form-label">Activity Type</label>
+                    <select id="typeFilter" class="form-control" onchange="filterActivities()">
+                        <option value="">All Types</option>
+                        <option value="poll">📊 Poll</option>
+                        <option value="short_answer">✍️ Short Answer</option>
+                        <option value="word_cloud">☁️ Word Cloud</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Teacher</label>
+                    <select id="teacherFilter" class="form-control" onchange="filterActivities()">
+                        <option value="">All Teachers</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activities Table -->
+    <div class="card">
+        <div class="card-body">
+            <table class="table" id="activitiesTable">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Type</th>
+                        <th>Course</th>
+                        <th>Teacher</th>
+                        <th>Responses</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="activitiesTableBody">
+                    <tr>
+                        <td colspan="7" style="text-align: center;">
+                            <div class="loading">Loading activities...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Detail Modal -->
+<div id="activityModal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h2>Activity Details</h2>
+            <button class="modal-close" onclick="closeActivityModal()">×</button>
+        </div>
+        
+        <div id="activityDetails" style="padding: 1.5rem;">
+            <!-- Activity details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+let allActivities = [];
+let filteredActivities = [];
+
+// Load activities on page load
+document.addEventListener('DOMContentLoaded', loadActivities);
+
+async function loadActivities() {
+    try {
+        const response = await fetch('/admin/api/activities');
+        const result = await response.json();
+        
+        if (result.success) {
+            allActivities = result.activities;
+            filteredActivities = allActivities;
+            displayActivities(filteredActivities);
+            populateTeacherFilter();
+        } else {
+            showAlert('Failed to load activities', 'danger');
+        }
+    } catch (error) {
+        showAlert('Error loading activities', 'danger');
+    }
+}
+
+function displayActivities(activities) {
+    const tbody = document.getElementById('activitiesTableBody');
+    
+    if (activities.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No activities found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = activities.map(activity => {
+        const typeIcon = activity.type === 'poll' ? '📊' : 
+                        activity.type === 'short_answer' ? '✍️' : '☁️';
+        const typeColor = activity.type === 'poll' ? '#2563eb' : 
+                         activity.type === 'short_answer' ? '#10b981' : '#f59e0b';
+        
+        const createdDate = activity.created_at ? 
+            new Date(activity.created_at).toLocaleDateString() : 'N/A';
+        
+        return `
+            <tr>
+                <td>
+                    <strong>${activity.title}</strong>
+                    ${activity.ai_generated ? '<br><small style="color:#f59e0b;">🤖 AI Generated</small>' : ''}
+                </td>
+                <td>
+                    <span style="background:${typeColor}; color:white; padding:0.25rem 0.75rem; border-radius:12px; font-size:0.875rem;">
+                        ${typeIcon} ${activity.type.replace('_', ' ')}
+                    </span>
+                </td>
+                <td>
+                    <strong>${activity.course_code}</strong><br>
+                    <small>${activity.course_name}</small>
+                </td>
+                <td>${activity.teacher_name}</td>
+                <td style="text-align:center;"><strong>${activity.response_count}</strong></td>
+                <td>${createdDate}</td>
+                <td>
+                    <button onclick="viewActivity('${activity._id}')" class="btn btn-sm">👁️ View</button>
+                    <button onclick="deleteActivity('${activity._id}', '${activity.title}')" class="btn btn-danger btn-sm">🗑️</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function populateTeacherFilter() {
+    const teachers = [...new Set(allActivities.map(a => a.teacher_name))].sort();
+    const select = document.getElementById('teacherFilter');
+    
+    teachers.forEach(teacher => {
+        const option = document.createElement('option');
+        option.value = teacher;
+        option.textContent = teacher;
+        select.appendChild(option);
+    });
+}
+
+function filterActivities() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const typeFilter = document.getElementById('typeFilter').value;
+    const teacherFilter = document.getElementById('teacherFilter').value;
+    
+    filteredActivities = allActivities.filter(activity => {
+        const matchesSearch = activity.title.toLowerCase().includes(search) ||
+                             activity.course_name.toLowerCase().includes(search) ||
+                             activity.teacher_name.toLowerCase().includes(search);
+        
+        const matchesType = !typeFilter || activity.type === typeFilter;
+        const matchesTeacher = !teacherFilter || activity.teacher_name === teacherFilter;
+        
+        return matchesSearch && matchesType && matchesTeacher;
+    });
+    
+    displayActivities(filteredActivities);
+}
+
+async function viewActivity(activityId) {
+    try {
+        showLoading();
+        const response = await fetch(`/admin/api/activities/${activityId}`);
+        const result = await response.json();
+        hideLoading();
+        
+        if (result.success) {
+            const activity = result.activity;
+            const detailsDiv = document.getElementById('activityDetails');
+            
+            let contentHtml = '';
+            
+            if (activity.type === 'poll') {
+                if (activity.content.questions) {
+                    contentHtml = '<h3>Questions:</h3>';
+                    activity.content.questions.forEach((q, i) => {
+                        contentHtml += `
+                            <div style="background:#f9fafb; padding:1rem; margin:0.5rem 0; border-radius:8px;">
+                                <p><strong>Q${i+1}:</strong> ${q.question}</p>
+                                <ul>
+                                    ${q.options.map(opt => 
+                                        `<li>${opt.label}. ${opt.text} ${opt.label === q.correct_answer ? '✅' : ''}</li>`
+                                    ).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    });
+                } else {
+                    contentHtml = `
+                        <p><strong>Question:</strong> ${activity.content.question}</p>
+                        <p><strong>Options:</strong></p>
+                        <ul>${activity.content.options.map(opt => `<li>${opt}</li>`).join('')}</ul>
+                    `;
+                }
+            } else if (activity.type === 'short_answer') {
+                contentHtml = `<p><strong>Question:</strong> ${activity.content.question}</p>`;
+            } else if (activity.type === 'word_cloud') {
+                contentHtml = `<p><strong>Prompt:</strong> ${activity.content.prompt}</p>`;
+            }
+            
+            detailsDiv.innerHTML = `
+                <h3>${activity.title}</h3>
+                <p><strong>Type:</strong> ${activity.type.replace('_', ' ')}</p>
+                <p><strong>Link:</strong> <a href="/a/${activity.link}" target="_blank">${activity.link}</a></p>
+                <div style="margin:1rem 0;">${contentHtml}</div>
+                <p><strong>Responses:</strong> ${activity.responses ? activity.responses.length : 0}</p>
+                ${activity.ai_generated ? '<p style="color:#f59e0b;">🤖 AI Generated</p>' : ''}
+            `;
+            
+            openModal('activityModal');
+        } else {
+            showAlert('Failed to load activity details', 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Error loading activity details', 'danger');
+    }
+}
+
+function closeActivityModal() {
+    closeModal('activityModal');
+}
+
+async function deleteActivity(activityId, title) {
+    if (!confirm(`Are you sure you want to delete activity "${title}"?\n\nThis will also delete all student responses.`)) {
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const response = await fetch(`/admin/api/activities/${activityId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        hideLoading();
+        
+        if (result.success) {
+            showAlert('Activity deleted successfully', 'success');
+            loadActivities();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Delete failed', 'danger');
+    }
+}
+</script>
+{% endblock %}
