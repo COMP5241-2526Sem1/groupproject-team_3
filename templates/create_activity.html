@@ -398,24 +398,82 @@ document.getElementById('createActivityForm').addEventListener('submit', async (
     e.preventDefault();
     
     const formData = new FormData(e.target);
-    const data = {};
+    const activityType = document.getElementById('activityType').value;
+    const data = {
+        course_id: formData.get('course_id'),
+        type: activityType,
+        title: formData.get('title'),
+        deadline: formData.get('deadline')
+    };
     
-    // Convert form data to object
-    for (let [key, value] of formData.entries()) {
-        if (key === 'options[]') {
-            if (!data.options) data.options = [];
-            if (value.trim()) data.options.push(value.trim());
-        } else if (key === 'allow_multiple') {
-            data.allow_multiple = true;
-        } else {
-            data[key] = value;
+    // Collect type-specific fields from visible section only
+    if (activityType === 'poll') {
+        const pollQuestion = document.querySelector('#pollFields textarea[name="question"]').value.trim();
+        const pollOptions = [];
+        document.querySelectorAll('#pollFields input[name="options[]"]').forEach(input => {
+            if (input.value.trim()) pollOptions.push(input.value.trim());
+        });
+        const allowMultiple = document.querySelector('#pollFields input[name="allow_multiple"]').checked;
+        
+        if (!pollQuestion) {
+            showAlert('Please enter a question for the poll', 'danger');
+            return;
         }
+        if (pollOptions.length < 2) {
+            showAlert('Poll must have at least 2 options', 'danger');
+            return;
+        }
+        
+        data.question = pollQuestion;
+        data.options = pollOptions;
+        data.allow_multiple = allowMultiple;
+        
+    } else if (activityType === 'short_answer') {
+        const saQuestion = document.querySelector('#shortAnswerFields textarea[name="question"]').value.trim();
+        const wordLimit = document.querySelector('#shortAnswerFields input[name="word_limit"]').value;
+        
+        if (!saQuestion) {
+            showAlert('Please enter a question for the short answer', 'danger');
+            return;
+        }
+        
+        data.question = saQuestion;
+        data.word_limit = parseInt(wordLimit) || 200;
+        
+    } else if (activityType === 'word_cloud') {
+        const wcQuestion = document.querySelector('#wordCloudFields textarea[name="question"]').value.trim();
+        const instructions = document.querySelector('#wordCloudFields textarea[name="instructions"]').value.trim();
+        
+        if (!wcQuestion) {
+            showAlert('Please enter a question for the word cloud', 'danger');
+            return;
+        }
+        
+        data.question = wcQuestion;
+        data.instructions = instructions || 'Enter keywords related to the topic';
     }
     
+    // Validate required fields
+    if (!data.title || !data.type || !data.course_id) {
+        showAlert('Please fill in all required fields', 'danger');
+        return;
+    }
+    
+    console.log('Submitting manual activity:', data);
     showLoading();
     
     try {
-        const result = await apiCall('{{ url_for("activity.create_activity") }}', 'POST', data);
+        const response = await fetch('{{ url_for("activity.create_activity") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        console.log('Response received:', response.status);
+        const result = await response.json();
+        console.log('Result:', result);
         hideLoading();
         
         if (result.success) {
@@ -424,11 +482,12 @@ document.getElementById('createActivityForm').addEventListener('submit', async (
                 window.location.href = '{{ url_for("course.dashboard") }}';
             }, 1000);
         } else {
-            showAlert(result.message, 'danger');
+            showAlert(result.message || 'Failed to create activity', 'danger');
         }
     } catch (error) {
         hideLoading();
-        showAlert('Failed to create activity', 'danger');
+        showAlert('Failed to create activity: ' + error.message, 'danger');
+        console.error('Error:', error);
     }
 });
 
@@ -650,7 +709,17 @@ async function confirmAIActivity() {
     showLoading();
     
     try {
-        const result = await apiCall('{{ url_for("activity.create_activity") }}', 'POST', data);
+        const response = await fetch('{{ url_for("activity.create_activity") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        console.log('Response received:', response.status);
+        const result = await response.json();
+        console.log('Result:', result);
         hideLoading();
         
         if (result.success) {
@@ -659,11 +728,12 @@ async function confirmAIActivity() {
                 window.location.href = '{{ url_for("course.dashboard") }}';
             }, 1000);
         } else {
-            showAlert(result.message, 'danger');
+            showAlert(result.message || 'Failed to create activity', 'danger');
         }
     } catch (error) {
         hideLoading();
-        showAlert('Failed to create activity', 'danger');
+        showAlert('Failed to create activity: ' + error.message, 'danger');
+        console.error('Error:', error);
     }
 }
 </script>
