@@ -72,11 +72,11 @@
                         <div id="poll-options">
                             <div class="form-group">
                                 <label class="form-label">Option 1 *</label>
-                                <input type="text" class="form-control poll-option" name="options[]" required>
+                                <input type="text" class="form-control poll-option" name="options[]">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Option 2 *</label>
-                                <input type="text" class="form-control poll-option" name="options[]" required>
+                                <input type="text" class="form-control poll-option" name="options[]">
                             </div>
                         </div>
                         
@@ -385,12 +385,66 @@ function selectMethod(method) {
     }
 }
 
+// Add poll option
+function addPollOption() {
+    const optionsContainer = document.getElementById('poll-options');
+    const optionCount = optionsContainer.querySelectorAll('.form-group').length + 1;
+    
+    const newOption = document.createElement('div');
+    newOption.className = 'form-group';
+    newOption.innerHTML = `
+        <label class="form-label">Option ${optionCount} *</label>
+        <input type="text" class="form-control poll-option" name="options[]">
+    `;
+    
+    optionsContainer.appendChild(newOption);
+    
+    // Update required attributes if poll is currently selected
+    const activityType = document.getElementById('activityType').value;
+    if (activityType === 'poll') {
+        newOption.querySelector('input').setAttribute('required', 'required');
+    }
+}
+
 function updateActivityFields() {
     const type = document.getElementById('activityType').value;
     
-    document.getElementById('pollFields').style.display = type === 'poll' ? 'block' : 'none';
-    document.getElementById('shortAnswerFields').style.display = type === 'short_answer' ? 'block' : 'none';
-    document.getElementById('wordCloudFields').style.display = type === 'word_cloud' ? 'block' : 'none';
+    // Show/hide sections
+    const pollFields = document.getElementById('pollFields');
+    const shortAnswerFields = document.getElementById('shortAnswerFields');
+    const wordCloudFields = document.getElementById('wordCloudFields');
+    
+    pollFields.style.display = type === 'poll' ? 'block' : 'none';
+    shortAnswerFields.style.display = type === 'short_answer' ? 'block' : 'none';
+    wordCloudFields.style.display = type === 'word_cloud' ? 'block' : 'none';
+    
+    // Enable/disable required attributes based on visibility
+    // Poll fields
+    const pollQuestion = pollFields.querySelector('textarea[name="question"]');
+    const pollOptions = pollFields.querySelectorAll('input[name="options[]"]');
+    if (type === 'poll') {
+        if (pollQuestion) pollQuestion.setAttribute('required', 'required');
+        pollOptions.forEach(input => input.setAttribute('required', 'required'));
+    } else {
+        if (pollQuestion) pollQuestion.removeAttribute('required');
+        pollOptions.forEach(input => input.removeAttribute('required'));
+    }
+    
+    // Short answer fields
+    const saQuestion = shortAnswerFields.querySelector('textarea[name="question"]');
+    if (type === 'short_answer') {
+        if (saQuestion) saQuestion.setAttribute('required', 'required');
+    } else {
+        if (saQuestion) saQuestion.removeAttribute('required');
+    }
+    
+    // Word cloud fields
+    const wcQuestion = wordCloudFields.querySelector('textarea[name="question"]');
+    if (type === 'word_cloud') {
+        if (wcQuestion) wcQuestion.setAttribute('required', 'required');
+    } else {
+        if (wcQuestion) wcQuestion.removeAttribute('required');
+    }
 }
 
 // Manual creation form
