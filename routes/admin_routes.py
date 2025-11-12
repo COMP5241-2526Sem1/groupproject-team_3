@@ -390,3 +390,119 @@ def manage_activity(activity_id):
     except Exception as e:
         logger.error(f"Manage activity error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@admin_bp.route('/admin/courses')
+@admin_required
+def courses_page():
+    """Admin courses management page"""
+    return render_template('admin_courses.html')
+
+@admin_bp.route('/admin/api/courses', methods=['GET'])
+@admin_required
+def get_courses():
+    """Get all courses with statistics"""
+    try:
+        courses = Course.find_all()
+        
+        for course in courses:
+            course['_id'] = str(course['_id'])
+            
+            # Get teacher info
+            teacher = User.find_by_id(course['teacher_id'])
+            if teacher:
+                course['teacher_username'] = teacher['username']
+                course['teacher_email'] = teacher['email']
+            
+            # Get student count
+            students = Student.find_by_course(course['_id'])
+            course['student_count'] = len(students) if students else 0
+            
+            # Get activity count
+            activities = Activity.find_by_course(course['_id'])
+            course['activity_count'] = len(activities) if activities else 0
+        
+        return jsonify({'success': True, 'courses': courses}), 200
+    except Exception as e:
+        logger.error(f"Get courses error: {e}")
+        return jsonify({'success': False, 'message': 'Failed to fetch courses'}), 500
+
+@admin_bp.route('/admin/api/courses/<course_id>', methods=['GET', 'PUT', 'DELETE'])
+@admin_required
+def manage_course(course_id):
+    """Get, update or delete a course"""
+    try:
+        if request.method == 'GET':
+            course = Course.find_by_id(course_id)
+            if not course:
+                return jsonify({'success': False, 'message': 'Course not found'}), 404
+            
+            course['_id'] = str(course['_id'])
+            
+            # Get teacher info
+            teacher = User.find_by_id(course['teacher_id'])
+            if teacher:
+                course['teacher_username'] = teacher['username']
+                course['teacher_email'] = teacher['email']
+            
+            # Get student count
+            students = Student.find_by_course(course_id)
+            course['student_count'] = len(students) if students else 0
+            
+            # Get activity count
+            activities = Activity.find_by_course(course_id)
+            course['activity_count'] = len(activities) if activities else 0
+            
+            return jsonify({'success': True, 'course': course}), 200
+        
+        elif request.method == 'PUT':
+            data = request.get_json()
+            
+            # Validate required fields
+            if not data.get('name') or not data.get('teacher_id'):
+                return jsonify({'success': False, 'message': 'Name and teacher are required'}), 400
+            
+            # Verify teacher exists
+            teacher = User.find_by_id(data['teacher_id'])
+            if not teacher or teacher['role'] != 'teacher':
+                return jsonify({'success': False, 'message': 'Invalid teacher'}), 400
+            
+            # Update course
+            update_data = {
+                'name': data['name'],
+                'description': data.get('description', ''),
+                'teacher_id': data['teacher_id']
+            }
+            
+            success = Course.update(course_id, update_data)
+            
+            if success:
+                logger.info(f"Course {course_id} updated by admin")
+                return jsonify({'success': True, 'message': 'Course updated'}), 200
+            else:
+                return jsonify({'success': False, 'message': 'Update failed'}), 500
+        
+        elif request.method == 'DELETE':
+            # Delete all activities in this course
+            activities = Activity.find_by_course(course_id)
+            if activities:
+                for activity in activities:
+                    Activity.delete(str(activity['_id']))
+            
+            # Delete all student enrollments
+            students = Student.find_by_course(course_id)
+            if students:
+                for student in students:
+                    Student.unenroll(str(student['_id']), course_id)
+            
+            # Delete course
+            success = Course.delete(course_id)
+            
+            if success:
+                logger.info(f"Course {course_id} and related data deleted by admin")
+                return jsonify({'success': True, 'message': 'Course deleted'}), 200
+            else:
+                return jsonify({'success': False, 'message': 'Delete failed'}), 500
+    
+    except Exception as e:
+        logger.error(f"Manage course error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500

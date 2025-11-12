@@ -16,14 +16,17 @@
         </div>
         <div class="card-body">
             <div class="grid grid-3">
-                <a href="{{ url_for('admin.users_page') }}" class="btn btn-primary" style="padding: 1.5rem; text-align: center;">
-                    👥 Manage Users
+                <a href="{{ url_for('admin.users_page') }}" class="btn btn-primary" style="padding: 1.5rem; text-align: center; font-size: 1.1rem;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">👥</div>
+                    <strong>Manage Users</strong>
                 </a>
-                <a href="{{ url_for('admin.activities_page') }}" class="btn btn-success" style="padding: 1.5rem; text-align: center;">
-                    📝 Manage Activities
+                <a href="{{ url_for('admin.activities_page') }}" class="btn btn-success" style="padding: 1.5rem; text-align: center; font-size: 1.1rem;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+                    <strong>Manage Activities</strong>
                 </a>
-                <a href="{{ url_for('course.dashboard') }}" class="btn" style="padding: 1.5rem; text-align: center;">
-                    📚 View All Courses
+                <a href="{{ url_for('admin.courses_page') }}" class="btn" style="padding: 1.5rem; text-align: center; font-size: 1.1rem; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📚</div>
+                    <strong>View All Courses</strong>
                 </a>
             </div>
         </div>
