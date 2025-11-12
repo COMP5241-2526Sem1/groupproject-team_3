@@ -378,3 +378,20 @@ class Activity:
             {'$set': update_fields}
         )
         return result.modified_count > 0
+    
+    @staticmethod
+    def delete(activity_id):
+        """
+        Hard delete activity - for admin use
+        
+        Args:
+            activity_id (str): Activity ID
+            
+        Returns:
+            bool: True if successful
+        """
+        result = db_service.delete_one(
+            Activity.COLLECTION_NAME,
+            {'_id': ObjectId(activity_id)}
+        )
+        return result.deleted_count > 0
