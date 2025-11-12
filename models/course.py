@@ -205,3 +205,48 @@ class Course:
             {'active': True},
             sort=[('created_at', -1)]
         )
+    
+    @staticmethod
+    def find_all():
+        """
+        Get all courses (including inactive) - for admin use
+        
+        Returns:
+            list: List of all course documents
+        """
+        return db_service.find_many(
+            Course.COLLECTION_NAME,
+            {},
+            sort=[('created_at', -1)]
+        )
+    
+    @staticmethod
+    def update(course_id, update_data):
+        """
+        Update course - wrapper for update_course
+        
+        Args:
+            course_id (str): Course ID
+            update_data (dict): Data to update
+            
+        Returns:
+            bool: True if successful
+        """
+        return Course.update_course(course_id, update_data)
+    
+    @staticmethod
+    def delete(course_id):
+        """
+        Hard delete course - for admin use
+        
+        Args:
+            course_id (str): Course ID
+            
+        Returns:
+            bool: True if successful
+        """
+        result = db_service.delete_one(
+            Course.COLLECTION_NAME,
+            {'_id': ObjectId(course_id)}
+        )
+        return result.deleted_count > 0

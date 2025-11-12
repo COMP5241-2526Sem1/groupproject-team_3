@@ -193,3 +193,25 @@ class Student:
             {'_id': ObjectId(student_id)}
         )
         return result.deleted_count > 0
+    
+    @staticmethod
+    def unenroll(student_id, course_id):
+        """
+        Unenroll student from a course (delete enrollment record)
+        For admin use when deleting courses
+        
+        Args:
+            student_id (str): Student database ID
+            course_id (str): Course ID to unenroll from
+            
+        Returns:
+            bool: True if successful
+        """
+        result = db_service.delete_one(
+            Student.COLLECTION_NAME,
+            {
+                '_id': ObjectId(student_id),
+                'course_id': course_id
+            }
+        )
+        return result.deleted_count > 0

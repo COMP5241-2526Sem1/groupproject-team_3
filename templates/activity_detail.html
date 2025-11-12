@@ -350,6 +350,47 @@
                             Submitted: {% if response.submitted_at %}{{ response.submitted_at.strftime('%Y-%m-%d %H:%M') }}{% else %}Unknown time{% endif %}
                         </p>
                         
+                        <!-- AI Evaluation Button -->
+                        {% if response.ai_evaluation %}
+                        <div style="margin-top: 0.5rem;">
+                            <button onclick="toggleAIFeedback({{ loop.index0 }})" class="btn btn-sm" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+                                🤖 View AI Feedback
+                            </button>
+                        </div>
+                        
+                        <!-- AI Feedback Section (Hidden by default) -->
+                        <div id="ai-feedback-{{ loop.index0 }}" style="display: none; margin-top: 1rem; background: linear-gradient(135deg, #f0f4ff, #fff0f6); padding: 1rem; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <h4 style="color: #5a67d8; margin-top: 0;">🤖 AI Evaluation</h4>
+                            <p style="margin: 0.5rem 0;"><strong>Score:</strong> {{ response.ai_evaluation.score }}/100</p>
+                            <p style="margin: 0.5rem 0;"><strong>Feedback:</strong> {{ response.ai_evaluation.feedback }}</p>
+                            {% if response.ai_evaluation.strengths %}
+                            <div style="margin-top: 0.75rem;">
+                                <strong style="color: #10b981;">✅ Strengths:</strong>
+                                <ul style="margin: 0.25rem 0;">
+                                    {% for strength in response.ai_evaluation.strengths %}
+                                    <li>{{ strength }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                            {% if response.ai_evaluation.improvements %}
+                            <div style="margin-top: 0.75rem;">
+                                <strong style="color: #f59e0b;">💡 Suggestions:</strong>
+                                <ul style="margin: 0.25rem 0;">
+                                    {% for improvement in response.ai_evaluation.improvements %}
+                                    <li>{{ improvement }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                            {% if response.ai_evaluation.encouragement %}
+                            <div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(255,255,255,0.7); border-radius: 4px;">
+                                <em>{{ response.ai_evaluation.encouragement }}</em>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
                         <!-- Teacher Feedback Section -->
                         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
                             {% if response.feedback %}
@@ -428,6 +469,33 @@
                         <p style="font-size: 0.875rem; color: #6b7280;">
                             Submitted: {% if response.submitted_at %}{{ response.submitted_at.strftime('%Y-%m-%d %H:%M') }}{% else %}Unknown time{% endif %}
                         </p>
+                        
+                        <!-- AI Evaluation Button for Word Cloud -->
+                        {% if response.ai_evaluation %}
+                        <div style="margin-top: 0.5rem;">
+                            <button onclick="toggleAIFeedback({{ loop.index0 }})" class="btn btn-sm" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+                                🤖 View AI Feedback
+                            </button>
+                        </div>
+                        
+                        <!-- AI Feedback Section (Hidden by default) -->
+                        <div id="ai-feedback-{{ loop.index0 }}" style="display: none; margin-top: 1rem; background: linear-gradient(135deg, #f0f4ff, #fff0f6); padding: 1rem; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <h4 style="color: #5a67d8; margin-top: 0;">🤖 AI Evaluation</h4>
+                            <p style="margin: 0.5rem 0;"><strong>Score:</strong> {{ response.ai_evaluation.score }}/100</p>
+                            <p style="margin: 0.5rem 0;"><strong>Feedback:</strong> {{ response.ai_evaluation.feedback }}</p>
+                            {% if response.ai_evaluation.relevance %}
+                            <p style="margin: 0.5rem 0;"><strong>Relevance:</strong> {{ response.ai_evaluation.relevance }}</p>
+                            {% endif %}
+                            {% if response.ai_evaluation.creativity %}
+                            <p style="margin: 0.5rem 0;"><strong>Creativity:</strong> {{ response.ai_evaluation.creativity }}</p>
+                            {% endif %}
+                            {% if response.ai_evaluation.encouragement %}
+                            <div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(255,255,255,0.7); border-radius: 4px;">
+                                <em>{{ response.ai_evaluation.encouragement }}</em>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
                         
                         <!-- Teacher Feedback Section -->
                         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
@@ -536,6 +604,16 @@ function toggleGroupedView() {
         groupedView.style.display = 'none';
         regularView.style.display = 'block';
         btn.textContent = '🤖 Show Grouped View';
+    }
+}
+
+// Toggle AI Feedback visibility
+function toggleAIFeedback(index) {
+    const feedbackDiv = document.getElementById(`ai-feedback-${index}`);
+    if (feedbackDiv.style.display === 'none') {
+        feedbackDiv.style.display = 'block';
+    } else {
+        feedbackDiv.style.display = 'none';
     }
 }
 

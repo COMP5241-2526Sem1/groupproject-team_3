@@ -72,11 +72,11 @@
                         <div id="poll-options">
                             <div class="form-group">
                                 <label class="form-label">Option 1 *</label>
-                                <input type="text" class="form-control poll-option" name="options[]" required>
+                                <input type="text" class="form-control poll-option" name="options[]">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Option 2 *</label>
-                                <input type="text" class="form-control poll-option" name="options[]" required>
+                                <input type="text" class="form-control poll-option" name="options[]">
                             </div>
                         </div>
                         
@@ -385,12 +385,66 @@ function selectMethod(method) {
     }
 }
 
+// Add poll option
+function addPollOption() {
+    const optionsContainer = document.getElementById('poll-options');
+    const optionCount = optionsContainer.querySelectorAll('.form-group').length + 1;
+    
+    const newOption = document.createElement('div');
+    newOption.className = 'form-group';
+    newOption.innerHTML = `
+        <label class="form-label">Option ${optionCount} *</label>
+        <input type="text" class="form-control poll-option" name="options[]">
+    `;
+    
+    optionsContainer.appendChild(newOption);
+    
+    // Update required attributes if poll is currently selected
+    const activityType = document.getElementById('activityType').value;
+    if (activityType === 'poll') {
+        newOption.querySelector('input').setAttribute('required', 'required');
+    }
+}
+
 function updateActivityFields() {
     const type = document.getElementById('activityType').value;
     
-    document.getElementById('pollFields').style.display = type === 'poll' ? 'block' : 'none';
-    document.getElementById('shortAnswerFields').style.display = type === 'short_answer' ? 'block' : 'none';
-    document.getElementById('wordCloudFields').style.display = type === 'word_cloud' ? 'block' : 'none';
+    // Show/hide sections
+    const pollFields = document.getElementById('pollFields');
+    const shortAnswerFields = document.getElementById('shortAnswerFields');
+    const wordCloudFields = document.getElementById('wordCloudFields');
+    
+    pollFields.style.display = type === 'poll' ? 'block' : 'none';
+    shortAnswerFields.style.display = type === 'short_answer' ? 'block' : 'none';
+    wordCloudFields.style.display = type === 'word_cloud' ? 'block' : 'none';
+    
+    // Enable/disable required attributes based on visibility
+    // Poll fields
+    const pollQuestion = pollFields.querySelector('textarea[name="question"]');
+    const pollOptions = pollFields.querySelectorAll('input[name="options[]"]');
+    if (type === 'poll') {
+        if (pollQuestion) pollQuestion.setAttribute('required', 'required');
+        pollOptions.forEach(input => input.setAttribute('required', 'required'));
+    } else {
+        if (pollQuestion) pollQuestion.removeAttribute('required');
+        pollOptions.forEach(input => input.removeAttribute('required'));
+    }
+    
+    // Short answer fields
+    const saQuestion = shortAnswerFields.querySelector('textarea[name="question"]');
+    if (type === 'short_answer') {
+        if (saQuestion) saQuestion.setAttribute('required', 'required');
+    } else {
+        if (saQuestion) saQuestion.removeAttribute('required');
+    }
+    
+    // Word cloud fields
+    const wcQuestion = wordCloudFields.querySelector('textarea[name="question"]');
+    if (type === 'word_cloud') {
+        if (wcQuestion) wcQuestion.setAttribute('required', 'required');
+    } else {
+        if (wcQuestion) wcQuestion.removeAttribute('required');
+    }
 }
 
 // Manual creation form
@@ -398,24 +452,115 @@ document.getElementById('createActivityForm').addEventListener('submit', async (
     e.preventDefault();
     
     const formData = new FormData(e.target);
-    const data = {};
+    const activityType = document.getElementById('activityType').value;
+    const data = {
+        course_id: formData.get('course_id'),
+        type: activityType,
+        title: formData.get('title'),
+        deadline: formData.get('deadline')
+    };
     
-    // Convert form data to object
-    for (let [key, value] of formData.entries()) {
-        if (key === 'options[]') {
-            if (!data.options) data.options = [];
-            if (value.trim()) data.options.push(value.trim());
-        } else if (key === 'allow_multiple') {
-            data.allow_multiple = true;
-        } else {
-            data[key] = value;
+    console.log('Activity type:', activityType);
+    
+    // Collect type-specific fields from visible section only
+    try {
+        if (activityType === 'poll') {
+            const questionField = document.querySelector('#pollFields textarea[name="question"]');
+            if (!questionField) {
+                console.error('Poll question field not found');
+                showAlert('Error: Poll question field not found', 'danger');
+                return;
+            }
+            const pollQuestion = questionField.value.trim();
+            
+            const pollOptions = [];
+            document.querySelectorAll('#pollFields input[name="options[]"]').forEach(input => {
+                if (input.value.trim()) pollOptions.push(input.value.trim());
+            });
+            
+            const allowMultipleField = document.querySelector('#pollFields input[name="allow_multiple"]');
+            const allowMultiple = allowMultipleField ? allowMultipleField.checked : false;
+            
+            if (!pollQuestion) {
+                showAlert('Please enter a question for the poll', 'danger');
+                return;
+            }
+            if (pollOptions.length < 2) {
+                showAlert('Poll must have at least 2 options', 'danger');
+                return;
+            }
+            
+            data.question = pollQuestion;
+            data.options = pollOptions;
+            data.allow_multiple = allowMultiple;
+            
+        } else if (activityType === 'short_answer') {
+            const questionField = document.querySelector('#shortAnswerFields textarea[name="question"]');
+            if (!questionField) {
+                console.error('Short answer question field not found');
+                showAlert('Error: Short answer question field not found', 'danger');
+                return;
+            }
+            const saQuestion = questionField.value.trim();
+            
+            const wordLimitField = document.querySelector('#shortAnswerFields input[name="word_limit"]');
+            const wordLimit = wordLimitField ? wordLimitField.value : '200';
+            
+            if (!saQuestion) {
+                showAlert('Please enter a question for the short answer', 'danger');
+                return;
+            }
+            
+            data.question = saQuestion;
+            data.word_limit = parseInt(wordLimit) || 200;
+            
+        } else if (activityType === 'word_cloud') {
+            const questionField = document.querySelector('#wordCloudFields textarea[name="question"]');
+            if (!questionField) {
+                console.error('Word cloud question field not found');
+                showAlert('Error: Word cloud question field not found', 'danger');
+                return;
+            }
+            const wcQuestion = questionField.value.trim();
+            
+            const instructionsField = document.querySelector('#wordCloudFields textarea[name="instructions"]');
+            const instructions = instructionsField ? instructionsField.value.trim() : '';
+            
+            if (!wcQuestion) {
+                showAlert('Please enter a question for the word cloud', 'danger');
+                return;
+            }
+            
+            data.question = wcQuestion;
+            data.instructions = instructions || 'Enter keywords related to the topic';
         }
+    } catch (error) {
+        console.error('Error collecting form data:', error);
+        showAlert('Error collecting form data: ' + error.message, 'danger');
+        return;
     }
     
+    // Validate required fields
+    if (!data.title || !data.type || !data.course_id) {
+        showAlert('Please fill in all required fields', 'danger');
+        return;
+    }
+    
+    console.log('Submitting manual activity:', data);
     showLoading();
     
     try {
-        const result = await apiCall('{{ url_for("activity.create_activity") }}', 'POST', data);
+        const response = await fetch('{{ url_for("activity.create_activity") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        console.log('Response received:', response.status);
+        const result = await response.json();
+        console.log('Result:', result);
         hideLoading();
         
         if (result.success) {
@@ -424,11 +569,12 @@ document.getElementById('createActivityForm').addEventListener('submit', async (
                 window.location.href = '{{ url_for("course.dashboard") }}';
             }, 1000);
         } else {
-            showAlert(result.message, 'danger');
+            showAlert(result.message || 'Failed to create activity', 'danger');
         }
     } catch (error) {
         hideLoading();
-        showAlert('Failed to create activity', 'danger');
+        showAlert('Failed to create activity: ' + error.message, 'danger');
+        console.error('Error:', error);
     }
 });
 
@@ -650,7 +796,17 @@ async function confirmAIActivity() {
     showLoading();
     
     try {
-        const result = await apiCall('{{ url_for("activity.create_activity") }}', 'POST', data);
+        const response = await fetch('{{ url_for("activity.create_activity") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        console.log('Response received:', response.status);
+        const result = await response.json();
+        console.log('Result:', result);
         hideLoading();
         
         if (result.success) {
@@ -659,11 +815,12 @@ async function confirmAIActivity() {
                 window.location.href = '{{ url_for("course.dashboard") }}';
             }, 1000);
         } else {
-            showAlert(result.message, 'danger');
+            showAlert(result.message || 'Failed to create activity', 'danger');
         }
     } catch (error) {
         hideLoading();
-        showAlert('Failed to create activity', 'danger');
+        showAlert('Failed to create activity: ' + error.message, 'danger');
+        console.error('Error:', error);
     }
 }
 </script>

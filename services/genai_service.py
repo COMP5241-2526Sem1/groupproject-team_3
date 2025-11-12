@@ -458,6 +458,108 @@ Return the analysis in JSON format:
             'common_misconceptions': [],
             'note': 'Fallback grouping used'
         }
+    
+    def evaluate_student_answer(self, question, student_answer, activity_type='short_answer'):
+        """
+        Generate AI evaluation and feedback for student's answer
+        
+        Args:
+            question (str): The question asked
+            student_answer (str): Student's answer
+            activity_type (str): Type of activity (short_answer or word_cloud)
+            
+        Returns:
+            dict: Evaluation with feedback, score, and suggestions
+        """
+        try:
+            # Construct evaluation prompt
+            if activity_type == 'short_answer':
+                prompt = f"""You are an educational AI assistant. Evaluate this student's answer and provide constructive feedback.
+
+Question: {question}
+
+Student's Answer: {student_answer}
+
+Provide evaluation in JSON format:
+{{
+    "score": <0-100>,
+    "feedback": "Constructive feedback highlighting strengths and areas for improvement",
+    "strengths": ["strength 1", "strength 2"],
+    "improvements": ["suggestion 1", "suggestion 2"],
+    "encouragement": "Positive encouraging message"
+}}
+
+Be supportive, constructive, and encouraging. Focus on what the student did well and how they can improve."""
+
+            else:  # word_cloud
+                prompt = f"""You are an educational AI assistant. Evaluate this student's word/phrase contribution.
+
+Prompt: {question}
+
+Student's Contribution: {student_answer}
+
+Provide evaluation in JSON format:
+{{
+    "score": <0-100>,
+    "feedback": "Brief feedback on relevance and creativity",
+    "relevance": "How relevant is this to the topic?",
+    "creativity": "How creative or insightful is this contribution?",
+    "encouragement": "Positive message"
+}}
+
+Be brief, supportive, and encouraging."""
+
+            logger.info(f"Generating AI evaluation for {activity_type} answer")
+            
+            # Call AI with shorter timeout for faster feedback
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a supportive educational AI assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+                temperature=0.7,
+                timeout=30  # Shorter timeout for evaluation
+            )
+            
+            # Parse response
+            response_text = response.choices[0].message.content.strip()
+            
+            # Extract JSON
+            if '```json' in response_text:
+                response_text = response_text.split('```json')[1].split('```')[0].strip()
+            elif '```' in response_text:
+                response_text = response_text.split('```')[1].split('```')[0].strip()
+            
+            evaluation = json.loads(response_text)
+            
+            logger.info("AI evaluation generated successfully")
+            return {
+                'success': True,
+                'evaluation': evaluation
+            }
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error in evaluation: {e}")
+            return {
+                'success': False,
+                'evaluation': {
+                    'score': 70,
+                    'feedback': 'Good effort! Your answer shows understanding of the topic.',
+                    'encouragement': 'Keep up the good work!'
+                }
+            }
+        except Exception as e:
+            logger.error(f"Evaluation generation error: {e}")
+            return {
+                'success': False,
+                'evaluation': {
+                    'score': 70,
+                    'feedback': 'Thank you for your submission. Your answer has been recorded.',
+                    'encouragement': 'Keep learning!'
+                }
+            }
 
 # Create global GenAI service instance
 genai_service = GenAIService()
