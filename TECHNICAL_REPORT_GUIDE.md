@@ -186,7 +186,7 @@ The system is built around three distinct roles, with functionality tailored to 
 - **Student Enrollment**: A streamlined process for bulk-adding students by uploading a CSV file.
 - **Activity Creation**:
     - **Manual Mode**: Teachers have fine-grained control to define questions and options.
-    - **AI-Assisted Mode**: Teachers can input raw text or upload a document (PDF, TXT). The system's `genai_service` communicates with the OpenAI API to automatically generate relevant questions, options, and key points based on the provided context.
+    - **AI-Assisted Mode**: Teachers can input raw text or upload a document (PDF, PPT). The system's `genai_service` communicates with the OpenAI API to automatically generate relevant questions, options, and key points based on the provided context.
 - **Results Analysis**: A detailed view for each activity shows all student responses, scores, and AI-generated feedback.
 
 ### 4.4. Student Module
