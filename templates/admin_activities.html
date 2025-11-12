@@ -114,10 +114,15 @@ function displayActivities(activities) {
     }
     
     tbody.innerHTML = activities.map(activity => {
-        const typeIcon = activity.type === 'poll' ? '📊' : 
-                        activity.type === 'short_answer' ? '✍️' : '☁️';
-        const typeColor = activity.type === 'poll' ? '#2563eb' : 
-                         activity.type === 'short_answer' ? '#10b981' : '#f59e0b';
+        // Type badge configuration
+        let typeBadge = '';
+        if (activity.type === 'poll') {
+            typeBadge = '<span style="background:#2563eb; color:white; padding:0.25rem 0.75rem; border-radius:12px; font-size:0.875rem; white-space:nowrap; display:inline-block;">📊 poll</span>';
+        } else if (activity.type === 'short_answer') {
+            typeBadge = '<span style="background:#10b981; color:white; padding:0.25rem 0.75rem; border-radius:12px; font-size:0.875rem; white-space:nowrap; display:inline-block;">✍️ short answer</span>';
+        } else if (activity.type === 'word_cloud') {
+            typeBadge = '<span style="background:#f59e0b; color:white; padding:0.25rem 0.75rem; border-radius:12px; font-size:0.875rem; white-space:nowrap; display:inline-block;">☁️ word cloud</span>';
+        }
         
         const createdDate = activity.created_at ? 
             new Date(activity.created_at).toLocaleDateString() : 'N/A';
@@ -128,11 +133,7 @@ function displayActivities(activities) {
                     <strong>${activity.title}</strong>
                     ${activity.ai_generated ? '<br><small style="color:#f59e0b;">🤖 AI Generated</small>' : ''}
                 </td>
-                <td>
-                    <span style="background:${typeColor}; color:white; padding:0.25rem 0.75rem; border-radius:12px; font-size:0.875rem;">
-                        ${typeIcon} ${activity.type.replace('_', ' ')}
-                    </span>
-                </td>
+                <td>${typeBadge}</td>
                 <td>
                     <strong>${activity.course_code}</strong><br>
                     <small>${activity.course_name}</small>
