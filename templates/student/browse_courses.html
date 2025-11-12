@@ -13,6 +13,19 @@
         <p class="text-muted">Explore and enroll in available courses</p>
     </div>
 
+    <!-- Search Bar -->
+    <div class="search-container">
+        <div class="search-box">
+            <input type="text" 
+                   id="courseSearch" 
+                   class="form-control search-input" 
+                   placeholder="🔎 Search by course code or name..."
+                   onkeyup="filterCourses()">
+            <button class="btn btn-secondary" onclick="clearSearch()">Clear</button>
+        </div>
+        <div id="searchResults" class="search-results-info"></div>
+    </div>
+
     {% if courses %}
     <div class="grid grid-3">
         {% for course in courses %}
@@ -62,6 +75,34 @@
 </div>
 
 <style>
+.search-container {
+    margin-bottom: 2rem;
+}
+.search-box {
+    display: flex;
+    gap: 1rem;
+    max-width: 600px;
+    margin: 0 auto 1rem;
+}
+.search-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+.search-input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+.search-results-info {
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
 .browse-course-card {
     border: 2px solid #e5e7eb;
     transition: all 0.3s;
@@ -71,6 +112,9 @@
     border-color: #4CAF50;
     box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
     transform: translateY(-4px);
+}
+.browse-course-card.hidden {
+    display: none;
 }
 .course-badge {
     margin-bottom: 1rem;
@@ -123,6 +167,50 @@
 </style>
 
 <script>
+function filterCourses() {
+    const searchInput = document.getElementById('courseSearch');
+    const filter = searchInput.value.toLowerCase().trim();
+    const courseCards = document.querySelectorAll('.browse-course-card');
+    const resultsInfo = document.getElementById('searchResults');
+    
+    let visibleCount = 0;
+    
+    courseCards.forEach(card => {
+        const courseName = card.querySelector('h3').textContent.toLowerCase();
+        const courseCode = card.querySelector('.badge-primary').textContent.toLowerCase();
+        
+        // Check if search term matches either name or code
+        if (courseName.includes(filter) || courseCode.includes(filter)) {
+            card.classList.remove('hidden');
+            visibleCount++;
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+    
+    // Update results info
+    if (filter) {
+        if (visibleCount === 0) {
+            resultsInfo.innerHTML = '❌ No courses found matching your search.';
+            resultsInfo.style.color = '#ef4444';
+        } else if (visibleCount === 1) {
+            resultsInfo.innerHTML = `✓ Found 1 course`;
+            resultsInfo.style.color = '#10b981';
+        } else {
+            resultsInfo.innerHTML = `✓ Found ${visibleCount} courses`;
+            resultsInfo.style.color = '#10b981';
+        }
+    } else {
+        resultsInfo.innerHTML = '';
+    }
+}
+
+function clearSearch() {
+    const searchInput = document.getElementById('courseSearch');
+    searchInput.value = '';
+    filterCourses();
+}
+
 async function enrollCourse(courseId, buttonElement) {
     if (!confirm('Do you want to enroll in this course?')) return;
     
@@ -152,7 +240,7 @@ async function enrollCourse(courseId, buttonElement) {
                     courseCard.remove();
                     
                     // Check if there are any remaining courses
-                    const remainingCourses = document.querySelectorAll('.browse-course-card');
+                    const remainingCourses = document.querySelectorAll('.browse-course-card:not(.hidden)');
                     if (remainingCourses.length === 0) {
                         // Show "all enrolled" message
                         const container = document.querySelector('.grid');
