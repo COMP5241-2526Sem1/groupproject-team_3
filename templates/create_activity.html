@@ -406,51 +406,84 @@ document.getElementById('createActivityForm').addEventListener('submit', async (
         deadline: formData.get('deadline')
     };
     
+    console.log('Activity type:', activityType);
+    
     // Collect type-specific fields from visible section only
-    if (activityType === 'poll') {
-        const pollQuestion = document.querySelector('#pollFields textarea[name="question"]').value.trim();
-        const pollOptions = [];
-        document.querySelectorAll('#pollFields input[name="options[]"]').forEach(input => {
-            if (input.value.trim()) pollOptions.push(input.value.trim());
-        });
-        const allowMultiple = document.querySelector('#pollFields input[name="allow_multiple"]').checked;
-        
-        if (!pollQuestion) {
-            showAlert('Please enter a question for the poll', 'danger');
-            return;
+    try {
+        if (activityType === 'poll') {
+            const questionField = document.querySelector('#pollFields textarea[name="question"]');
+            if (!questionField) {
+                console.error('Poll question field not found');
+                showAlert('Error: Poll question field not found', 'danger');
+                return;
+            }
+            const pollQuestion = questionField.value.trim();
+            
+            const pollOptions = [];
+            document.querySelectorAll('#pollFields input[name="options[]"]').forEach(input => {
+                if (input.value.trim()) pollOptions.push(input.value.trim());
+            });
+            
+            const allowMultipleField = document.querySelector('#pollFields input[name="allow_multiple"]');
+            const allowMultiple = allowMultipleField ? allowMultipleField.checked : false;
+            
+            if (!pollQuestion) {
+                showAlert('Please enter a question for the poll', 'danger');
+                return;
+            }
+            if (pollOptions.length < 2) {
+                showAlert('Poll must have at least 2 options', 'danger');
+                return;
+            }
+            
+            data.question = pollQuestion;
+            data.options = pollOptions;
+            data.allow_multiple = allowMultiple;
+            
+        } else if (activityType === 'short_answer') {
+            const questionField = document.querySelector('#shortAnswerFields textarea[name="question"]');
+            if (!questionField) {
+                console.error('Short answer question field not found');
+                showAlert('Error: Short answer question field not found', 'danger');
+                return;
+            }
+            const saQuestion = questionField.value.trim();
+            
+            const wordLimitField = document.querySelector('#shortAnswerFields input[name="word_limit"]');
+            const wordLimit = wordLimitField ? wordLimitField.value : '200';
+            
+            if (!saQuestion) {
+                showAlert('Please enter a question for the short answer', 'danger');
+                return;
+            }
+            
+            data.question = saQuestion;
+            data.word_limit = parseInt(wordLimit) || 200;
+            
+        } else if (activityType === 'word_cloud') {
+            const questionField = document.querySelector('#wordCloudFields textarea[name="question"]');
+            if (!questionField) {
+                console.error('Word cloud question field not found');
+                showAlert('Error: Word cloud question field not found', 'danger');
+                return;
+            }
+            const wcQuestion = questionField.value.trim();
+            
+            const instructionsField = document.querySelector('#wordCloudFields textarea[name="instructions"]');
+            const instructions = instructionsField ? instructionsField.value.trim() : '';
+            
+            if (!wcQuestion) {
+                showAlert('Please enter a question for the word cloud', 'danger');
+                return;
+            }
+            
+            data.question = wcQuestion;
+            data.instructions = instructions || 'Enter keywords related to the topic';
         }
-        if (pollOptions.length < 2) {
-            showAlert('Poll must have at least 2 options', 'danger');
-            return;
-        }
-        
-        data.question = pollQuestion;
-        data.options = pollOptions;
-        data.allow_multiple = allowMultiple;
-        
-    } else if (activityType === 'short_answer') {
-        const saQuestion = document.querySelector('#shortAnswerFields textarea[name="question"]').value.trim();
-        const wordLimit = document.querySelector('#shortAnswerFields input[name="word_limit"]').value;
-        
-        if (!saQuestion) {
-            showAlert('Please enter a question for the short answer', 'danger');
-            return;
-        }
-        
-        data.question = saQuestion;
-        data.word_limit = parseInt(wordLimit) || 200;
-        
-    } else if (activityType === 'word_cloud') {
-        const wcQuestion = document.querySelector('#wordCloudFields textarea[name="question"]').value.trim();
-        const instructions = document.querySelector('#wordCloudFields textarea[name="instructions"]').value.trim();
-        
-        if (!wcQuestion) {
-            showAlert('Please enter a question for the word cloud', 'danger');
-            return;
-        }
-        
-        data.question = wcQuestion;
-        data.instructions = instructions || 'Enter keywords related to the topic';
+    } catch (error) {
+        console.error('Error collecting form data:', error);
+        showAlert('Error collecting form data: ' + error.message, 'danger');
+        return;
     }
     
     // Validate required fields
