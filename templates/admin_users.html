@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - Admin{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 2rem;">
+    <!-- Header -->
+    <div class="card mb-4">
+        <div class="card-header flex-between">
+            <h1>👥 User Management</h1>
+            <button onclick="showCreateUserModal()" class="btn btn-success">
+                ➕ Create New User
+            </button>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card">
+        <div class="card-body">
+            <div style="margin-bottom: 1rem;">
+                <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search users..." 
+                       onkeyup="filterUsers()" style="max-width: 400px;">
+            </div>
+
+            <table class="table" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Email</th>
+                        <th>Institution</th>
+                        <th>Stats</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr>
+                        <td colspan="6" style="text-align: center;">
+                            <div class="loading">Loading users...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit User Modal -->
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Create New User</h2>
+            <button class="modal-close" onclick="closeUserModal()">×</button>
+        </div>
+        
+        <form id="userForm">
+            <input type="hidden" id="userId">
+            
+            <div class="form-group">
+                <label class="form-label">Username *</label>
+                <input type="text" id="username" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" id="email" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Role *</label>
+                <select id="role" class="form-control" required>
+                    <option value="teacher">Teacher</option>
+                    <option value="student">Student</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Institution</label>
+                <input type="text" id="institution" class="form-control">
+            </div>
+            
+            <div class="form-group" id="studentIdGroup" style="display:none;">
+                <label class="form-label">Student ID</label>
+                <input type="text" id="studentId" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Password <span id="passwordHint">(leave blank to keep current)</span></label>
+                <input type="password" id="password" class="form-control">
+            </div>
+            
+            <div class="flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    💾 Save
+                </button>
+                <button type="button" class="btn" onclick="closeUserModal()">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let allUsers = [];
+let editingUserId = null;
+
+// Load users on page load
+document.addEventListener('DOMContentLoaded', loadUsers);
+
+// Role change handler
+document.getElementById('role').addEventListener('change', (e) => {
+    const studentIdGroup = document.getElementById('studentIdGroup');
+    studentIdGroup.style.display = e.target.value === 'student' ? 'block' : 'none';
+});
+
+async function loadUsers() {
+    try {
+        const response = await fetch('/admin/api/users');
+        const result = await response.json();
+        
+        if (result.success) {
+            allUsers = result.users;
+            displayUsers(allUsers);
+        } else {
+            showAlert('Failed to load users', 'danger');
+        }
+    } catch (error) {
+        showAlert('Error loading users', 'danger');
+    }
+}
+
+function displayUsers(users) {
+    const tbody = document.getElementById('usersTableBody');
+    
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No users found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => {
+        const roleColor = user.role === 'admin' ? '#dc2626' : 
+                         user.role === 'teacher' ? '#2563eb' : '#10b981';
+        
+        let stats = '-';
+        if (user.role === 'teacher' && user.course_count !== undefined) {
+            stats = `${user.course_count} courses`;
+        } else if (user.role === 'student' && user.enrolled_count !== undefined) {
+            stats = `${user.enrolled_count} enrolled`;
+        }
+        
+        const canDelete = user._id !== '{{ session.get("user_id") }}';
+        
+        return `
+            <tr>
+                <td><strong>${user.username}</strong></td>
+                <td><span style="background:${roleColor}; color:white; padding:0.25rem 0.75rem; border-radius:12px; font-size:0.875rem;">${user.role}</span></td>
+                <td>${user.email || '-'}</td>
+                <td>${user.institution || '-'}</td>
+                <td>${stats}</td>
+                <td>
+                    <button onclick="editUser('${user._id}')" class="btn btn-sm">✏️ Edit</button>
+                    ${canDelete ? `<button onclick="deleteUser('${user._id}', '${user.username}')" class="btn btn-danger btn-sm">🗑️</button>` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterUsers() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allUsers.filter(user => 
+        user.username.toLowerCase().includes(search) ||
+        (user.email && user.email.toLowerCase().includes(search)) ||
+        user.role.toLowerCase().includes(search)
+    );
+    displayUsers(filtered);
+}
+
+function showCreateUserModal() {
+    editingUserId = null;
+    document.getElementById('modalTitle').textContent = 'Create New User';
+    document.getElementById('userForm').reset();
+    document.getElementById('userId').value = '';
+    document.getElementById('passwordHint').style.display = 'none';
+    document.getElementById('password').required = true;
+    openModal('userModal');
+}
+
+async function editUser(userId) {
+    try {
+        const response = await fetch(`/admin/api/users/${userId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const user = result.user;
+            editingUserId = userId;
+            
+            document.getElementById('modalTitle').textContent = 'Edit User';
+            document.getElementById('userId').value = userId;
+            document.getElementById('username').value = user.username;
+            document.getElementById('email').value = user.email || '';
+            document.getElementById('role').value = user.role;
+            document.getElementById('institution').value = user.institution || '';
+            document.getElementById('studentId').value = user.student_id || '';
+            document.getElementById('password').value = '';
+            document.getElementById('password').required = false;
+            document.getElementById('passwordHint').style.display = 'inline';
+            
+            // Show/hide student ID field
+            document.getElementById('studentIdGroup').style.display = 
+                user.role === 'student' ? 'block' : 'none';
+            
+            openModal('userModal');
+        } else {
+            showAlert('Failed to load user data', 'danger');
+        }
+    } catch (error) {
+        showAlert('Error loading user data', 'danger');
+    }
+}
+
+function closeUserModal() {
+    closeModal('userModal');
+    editingUserId = null;
+}
+
+document.getElementById('userForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const data = {
+        username: document.getElementById('username').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        role: document.getElementById('role').value,
+        institution: document.getElementById('institution').value.trim()
+    };
+    
+    const password = document.getElementById('password').value.trim();
+    if (password) {
+        data.password = password;
+    }
+    
+    if (data.role === 'student') {
+        data.student_id = document.getElementById('studentId').value.trim() || data.username;
+    }
+    
+    showLoading();
+    
+    try {
+        let url, method;
+        if (editingUserId) {
+            url = `/admin/api/users/${editingUserId}`;
+            method = 'PUT';
+        } else {
+            url = '/admin/api/users/create';
+            method = 'POST';
+        }
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        hideLoading();
+        
+        if (result.success) {
+            showAlert(result.message, 'success');
+            closeUserModal();
+            loadUsers();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Operation failed', 'danger');
+    }
+});
+
+async function deleteUser(userId, username) {
+    if (!confirm(`Are you sure you want to delete user "${username}"?`)) {
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const response = await fetch(`/admin/api/users/${userId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        hideLoading();
+        
+        if (result.success) {
+            showAlert('User deleted successfully', 'success');
+            loadUsers();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Delete failed', 'danger');
+    }
+}
+</script>
+{% endblock %}
