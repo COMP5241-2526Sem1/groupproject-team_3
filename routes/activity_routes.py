@@ -585,6 +585,18 @@ def submit_response(activity_id):
                     'success': False,
                     'message': 'Please enter your answer'
                 }), 400
+            
+            # Generate AI evaluation for short answer
+            question = activity['content'].get('question', '')
+            ai_result = genai_service.evaluate_student_answer(
+                question=question,
+                student_answer=response_data['text'],
+                activity_type='short_answer'
+            )
+            
+            if ai_result['success']:
+                response_data['ai_evaluation'] = ai_result['evaluation']
+                logger.info("AI evaluation added to short answer response")
         
         elif activity['type'] == Activity.TYPE_WORD_CLOUD:
             response_data['keywords'] = data.get('keywords', [])
@@ -593,6 +605,19 @@ def submit_response(activity_id):
                     'success': False,
                     'message': 'Please enter at least one keyword'
                 }), 400
+            
+            # Generate AI evaluation for word cloud
+            prompt = activity['content'].get('prompt', '')
+            keywords_text = ', '.join(response_data['keywords'])
+            ai_result = genai_service.evaluate_student_answer(
+                question=prompt,
+                student_answer=keywords_text,
+                activity_type='word_cloud'
+            )
+            
+            if ai_result['success']:
+                response_data['ai_evaluation'] = ai_result['evaluation']
+                logger.info("AI evaluation added to word cloud response")
         
         # Check if this is an update (for short_answer and word_cloud)
         is_update = data.get('is_update', False)
@@ -624,6 +649,11 @@ def submit_response(activity_id):
                     'percentage': response_data['percentage'],
                     'answers': response_data['answers']
                 }
+            
+            # For short_answer and word_cloud, include AI evaluation
+            if 'ai_evaluation' in response_data:
+                result['ai_evaluation'] = response_data['ai_evaluation']
+                logger.info("AI evaluation included in response")
             
             return jsonify(result), 201
         else:

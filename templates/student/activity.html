@@ -327,6 +327,9 @@ document.getElementById('responseForm').addEventListener('submit', async (e) => 
             // Check if we have evaluation results (for multi-question polls)
             if (result.evaluation) {
                 displayEvaluation(result.evaluation);
+            } else if (result.ai_evaluation) {
+                // Display AI evaluation for short answer or word cloud
+                displayAIEvaluation(result.ai_evaluation);
             } else {
                 document.getElementById('responseForm').style.display = 'none';
                 document.getElementById('successMessage').style.display = 'block';
@@ -372,6 +375,89 @@ function displayEvaluation(evaluation) {
     
     html += `
             </div>
+            <a href="{{ url_for('student.course_detail', course_id=course._id) }}" 
+               class="btn btn-primary" style="margin-top: 1rem;">
+                Back to Course
+            </a>
+        </div>
+    `;
+    
+    document.querySelector('.card-body').innerHTML = html;
+}
+
+function displayAIEvaluation(evaluation) {
+    // Hide form and show AI feedback
+    document.getElementById('responseForm').style.display = 'none';
+    
+    const scoreColor = evaluation.score >= 80 ? '#10b981' : 
+                       evaluation.score >= 60 ? '#f59e0b' : '#ef4444';
+    
+    let html = `
+        <div style="text-align: center; padding: 2rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">
+                ${evaluation.score >= 80 ? '🌟' : evaluation.score >= 60 ? '👍' : '💪'}
+            </div>
+            <h2>Thank you for your submission!</h2>
+            <p style="font-size: 1.2rem; margin: 1rem 0; color: ${scoreColor};">
+                <strong>AI Evaluation Score: ${evaluation.score}/100</strong>
+            </p>
+            
+            <div style="text-align: left; margin: 2rem auto; max-width: 700px;">
+                <div style="background: #f0f9ff; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 1rem;">
+                    <h3 style="color: #1e40af; margin-top: 0;">📝 Feedback</h3>
+                    <p style="margin: 0;">${evaluation.feedback}</p>
+                </div>`;
+    
+    if (evaluation.strengths && evaluation.strengths.length > 0) {
+        html += `
+                <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10b981; margin-bottom: 1rem;">
+                    <h3 style="color: #065f46; margin-top: 0;">✅ Strengths</h3>
+                    <ul style="margin: 0;">`;
+        evaluation.strengths.forEach(strength => {
+            html += `<li>${strength}</li>`;
+        });
+        html += `</ul></div>`;
+    }
+    
+    if (evaluation.improvements && evaluation.improvements.length > 0) {
+        html += `
+                <div style="background: #fef3c7; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 1rem;">
+                    <h3 style="color: #92400e; margin-top: 0;">💡 Areas for Improvement</h3>
+                    <ul style="margin: 0;">`;
+        evaluation.improvements.forEach(improvement => {
+            html += `<li>${improvement}</li>`;
+        });
+        html += `</ul></div>`;
+    }
+    
+    if (evaluation.relevance || evaluation.creativity) {
+        html += `
+                <div style="background: #faf5ff; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #a855f7; margin-bottom: 1rem;">
+                    <h3 style="color: #6b21a8; margin-top: 0;">🎨 Analysis</h3>`;
+        if (evaluation.relevance) {
+            html += `<p><strong>Relevance:</strong> ${evaluation.relevance}</p>`;
+        }
+        if (evaluation.creativity) {
+            html += `<p style="margin: 0;"><strong>Creativity:</strong> ${evaluation.creativity}</p>`;
+        }
+        html += `</div>`;
+    }
+    
+    if (evaluation.encouragement) {
+        html += `
+                <div style="background: linear-gradient(135deg, #fef3c7, #fce7f3); padding: 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+                    <p style="margin: 0; font-size: 1.1rem; color: #831843;">
+                        <strong>✨ ${evaluation.encouragement}</strong>
+                    </p>
+                </div>`;
+    }
+    
+    html += `
+                <p style="font-size: 0.875rem; color: #6b7280; margin-top: 1rem;">
+                    <em>💡 You can edit your answer and resubmit to get new AI feedback.</em>
+                </p>
+            </div>
+            
             <a href="{{ url_for('student.course_detail', course_id=course._id) }}" 
                class="btn btn-primary" style="margin-top: 1rem;">
                 Back to Course
