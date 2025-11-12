@@ -7,6 +7,19 @@
     <div class="page-header">
         <h1>{{ activity.title }}</h1>
         <p>{{ course.name }} - {{ course.code }}</p>
+        {% if activity.deadline %}
+        <div style="margin-top: 1rem;">
+            {% if is_expired %}
+            <span style="background: #fee2e2; color: #991b1b; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500;">
+                ⏰ Expired: {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') if activity.deadline_display else activity.deadline.strftime('%Y-%m-%d %H:%M') }} (HKT)
+            </span>
+            {% else %}
+            <span style="background: #fef3c7; color: #92400e; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500;">
+                ⏰ Deadline: {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') if activity.deadline_display else activity.deadline.strftime('%Y-%m-%d %H:%M') }} (HKT)
+            </span>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 
     <div class="card">
@@ -99,6 +112,16 @@
             </div>
 
             {% else %}
+            <!-- Check if activity has expired -->
+            {% if is_expired %}
+            <div class="alert alert-danger">
+                <h3>⏰ This Activity Has Expired</h3>
+                <p>The deadline for this activity has passed. You can no longer submit responses.</p>
+                <p><strong>Deadline was:</strong> {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') if activity.deadline_display else activity.deadline.strftime('%Y-%m-%d %H:%M') }} (HKT)</p>
+                <a href="{{ url_for('student.course_detail', course_id=course._id) }}" 
+                   class="btn btn-primary" style="margin-top: 1rem;">Back to Course</a>
+            </div>
+            {% else %}
             <!-- Show response form -->
             <form id="responseForm">
                 {% if activity.type == 'poll' and 'questions' in activity.content and activity.content.questions|length > 0 %}
@@ -170,6 +193,8 @@
                     Submit Response
                 </button>
             </form>
+            {% endif %}
+            <!-- End of is_expired check -->
 
             <div id="successMessage" style="display: none; text-align: center; padding: 3rem;">
                 <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>

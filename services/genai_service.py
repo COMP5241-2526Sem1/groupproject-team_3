@@ -65,74 +65,49 @@ class GenAIService:
             
             # Construct prompt based on activity type
             prompts = {
-                'poll': f"""Create EXACTLY {num_questions} poll question(s) for the topic: {teaching_content}
+                'poll': f"""Create {num_questions} quiz question(s) from this content:
 
-IMPORTANT: You MUST generate exactly {num_questions} question(s). No more, no less.
+{teaching_content}
 
-For each question, generate:
-1. A clear multiple choice question related to the topic
-2. Exactly 4 options (labeled A, B, C, D)
-3. The correct answer (specify which option: A, B, C, or D)
-4. A brief explanation (1-2 sentences) of why that answer is correct
-
-Return the response in valid JSON format:
+JSON format (exactly {num_questions} questions):
 {{
-    "title": "Quiz: [Topic Name]",
+    "title": "Quiz: [Topic]",
     "questions": [
         {{
-            "question": "Question text here?",
+            "question": "Question?",
             "options": [
-                {{"label": "A", "text": "First option"}},
-                {{"label": "B", "text": "Second option"}},
-                {{"label": "C", "text": "Third option"}},
-                {{"label": "D", "text": "Fourth option"}}
+                {{"label": "A", "text": "..."}},
+                {{"label": "B", "text": "..."}},
+                {{"label": "C", "text": "..."}},
+                {{"label": "D", "text": "..."}}
             ],
             "correct_answer": "A",
-            "explanation": "Brief explanation of why option A is correct"
-        }},
-        ... (repeat for all {num_questions} questions)
+            "explanation": "Why A is correct."
+        }}
     ]
-}}
-
-CRITICAL REQUIREMENTS:
-- Generate EXACTLY {num_questions} questions in the "questions" array
-- Each question MUST have exactly 4 options (A, B, C, D)
-- correct_answer MUST be one of: A, B, C, or D
-- Make questions challenging but fair for university students
-- Ensure proper JSON formatting with correct brackets and commas
-- DO NOT add any text outside the JSON structure""",
+}}""",
                 
-                'short_answer': f"""Create 3 short-answer questions for the topic: {teaching_content}
-                
-For each question, include:
-1. A clear question that tests understanding
-2. Key points that should be in a good answer
-3. Word limit suggestion (50-200 words)
+                'short_answer': f"""Create 3 questions from: {teaching_content}
 
-Return the response in JSON format:
+JSON format:
 {{
     "questions": [
         {{
-            "question": "Question text",
-            "key_points": ["Point 1", "Point 2", "Point 3"],
+            "question": "...",
+            "key_points": ["...", "...", "..."],
             "word_limit": 150
         }}
     ]
 }}""",
                 
-                'word_cloud': f"""Create a word cloud activity for the topic: {teaching_content}
-                
-Generate:
-1. A prompt question that will elicit key terms
-2. 5-8 expected keywords related to the topic
-3. Instructions for students
+                'word_cloud': f"""Create word cloud activity from: {teaching_content}
 
-Return the response in JSON format:
+JSON format:
 {{
-    "title": "Word Cloud Title",
-    "question": "What words come to mind when you think about...",
-    "expected_keywords": ["keyword1", "keyword2", "keyword3"],
-    "instructions": "Enter single words or short phrases"
+    "title": "...",
+    "question": "...",
+    "expected_keywords": ["...", "...", "..."],
+    "instructions": "..."
 }}"""
             }
             
@@ -142,31 +117,50 @@ Return the response in JSON format:
             # Each poll question needs ~150-200 tokens (question + 4 options + explanation)
             # Add buffer for JSON structure
             if activity_type == 'poll':
-                base_tokens = 200  # For JSON structure and title
+                base_tokens = 300  # For JSON structure and title
                 tokens_per_question = 200  # Per question (question + options + explanation)
                 max_tokens = base_tokens + (num_questions * tokens_per_question)
-                # Cap at 4000 to stay within model limits
-                max_tokens = min(max_tokens, 4000)
+                # Increase limit to allow for larger responses
+                # gpt-4o-mini supports up to 16,384 tokens output
+                max_tokens = min(max_tokens, 16000)
+                logger.info(f"Requesting {num_questions} poll questions with max_tokens={max_tokens}")
             else:
-                max_tokens = 1500  # Sufficient for other activity types
+                max_tokens = 2000  # Sufficient for other activity types
             
             # Call OpenAI API
             # Use lower temperature for poll questions to ensure consistent formatting
             temperature = 0.5 if activity_type == 'poll' else 0.7
             
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an expert educational content creator for university lecturers in Hong Kong. Generate high-quality learning activities in English. Always return valid JSON format."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": "You are an expert educational content creator. Generate concise, high-quality learning activities in valid JSON format. Be efficient with words while maintaining clarity."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    timeout=60  # Increase timeout for large responses
+                )
+            except Exception as api_error:
+                logger.error(f"OpenAI API error: {api_error}")
+                # If API call fails, return fallback immediately
+                return self._get_fallback_activity(activity_type, teaching_content)
             
             # Parse response
             content = response.choices[0].message.content
-            logger.info(f"Generated activity for topic: {teaching_content}, num_questions: {num_questions}")
+            finish_reason = response.choices[0].finish_reason
+            
+            logger.info(f"AI response - Length: {len(content)} chars, Finish reason: {finish_reason}")
+            
+            # Check if response was cut off
+            if finish_reason == 'length':
+                logger.warning(f"Response was truncated due to token limit! Content length: {len(content)}")
+                logger.warning("Reducing content or question count recommended")
+            
+            # Log first and last 100 chars to debug
+            logger.debug(f"Response start: {content[:100]}")
+            logger.debug(f"Response end: {content[-100:]}")
             
             # Extract JSON from response
             if '```json' in content:
@@ -174,9 +168,18 @@ Return the response in JSON format:
             elif '```' in content:
                 content = content.split('```')[1].split('```')[0].strip()
             
-            result = json.loads(content)
+            # Try to parse JSON
+            try:
+                result = json.loads(content)
+            except json.JSONDecodeError as json_err:
+                logger.error(f"JSON decode error: {json_err}")
+                logger.error(f"Content preview (first 500 chars): {content[:500]}")
+                logger.error(f"Content preview (last 500 chars): {content[-500:]}")
+                # If JSON is invalid, try to fix common issues or return fallback
+                raise json_err
+            
             result['activity_type'] = activity_type
-            result['source_content'] = teaching_content
+            result['source_content'] = teaching_content[:100] + "..." if len(teaching_content) > 100 else teaching_content
             
             # Validate poll question count for multi-question polls
             if activity_type == 'poll' and num_questions > 1:

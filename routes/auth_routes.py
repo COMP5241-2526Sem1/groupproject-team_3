@@ -161,21 +161,6 @@ def logout():
     logger.info(f"User logged out: {username}")
     return redirect(url_for('auth.login'))
 
-@auth_bp.route('/profile')
-def profile():
-    """
-    View user profile
-    Requires authentication
-    """
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    
-    user = auth_service.get_user_by_id(session['user_id'])
-    if not user:
-        return redirect(url_for('auth.logout'))
-    
-    return render_template('profile.html', user=user)
-
 @auth_bp.route('/change-password', methods=['POST'])
 def change_password():
     """

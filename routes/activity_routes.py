@@ -8,6 +8,7 @@ from models.activity import Activity
 from models.course import Course
 from services.genai_service import genai_service
 from bson import ObjectId
+from datetime import datetime, timedelta
 import logging
 
 # Configure logging
@@ -128,13 +129,38 @@ def create_activity():
                 'message': 'Invalid activity type'
             }), 400
         
+        # Parse deadline if provided
+        deadline = None
+        deadline_str = data.get('deadline', '').strip()
+        if deadline_str:
+            try:
+                # Convert from local datetime string to datetime object
+                from datetime import datetime, timezone
+                # Parse the ISO format datetime (comes from datetime-local input)
+                local_deadline = datetime.fromisoformat(deadline_str)
+                
+                # Assume the input is in Hong Kong timezone (UTC+8)
+                # Convert to UTC for storage
+                from datetime import timedelta
+                hk_offset = timedelta(hours=8)
+                deadline = local_deadline - hk_offset
+                
+                logger.info(f"Deadline input (HK time): {local_deadline}, Stored (UTC): {deadline}")
+            except ValueError as e:
+                logger.error(f"Deadline parse error: {e}, Input: {deadline_str}")
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid deadline format'
+                }), 400
+        
         # Create activity
         activity = Activity(
             title=title,
             activity_type=activity_type,
             content=content,
             course_id=course_id,
-            teacher_id=session['user_id']
+            teacher_id=session['user_id'],
+            deadline=deadline
         )
         
         activity_id = activity.save()
@@ -163,15 +189,114 @@ def create_activity():
 def ai_generate_activity():
     """
     Generate activity using AI
-    Uses GPT-4 to create activity based on teaching content
+    Uses GPT-4 to create activity based on teaching content or uploaded document
     """
     try:
-        data = request.get_json() if request.is_json else request.form
+        logger.info("=== AI Generate Activity Request Started ===")
+        logger.info(f"Form data keys: {list(request.form.keys())}")
+        logger.info(f"Files keys: {list(request.files.keys())}")
         
-        teaching_content = data.get('teaching_content', '').strip()
-        activity_type = data.get('type', 'short_answer').strip()
-        course_id = data.get('course_id', '').strip()
-        num_questions = int(data.get('num_questions', 1))
+        # Check if this is a file upload or text content
+        content_source = request.form.get('content_source', 'text')
+        logger.info(f"Content source: {content_source}")
+        teaching_content = ''
+        
+        if content_source == 'file' and 'course_file' in request.files:
+            # Handle file upload
+            file = request.files['course_file']
+            
+            if file.filename == '':
+                return jsonify({
+                    'success': False,
+                    'message': 'No file selected'
+                }), 400
+            
+            # Check file extension
+            allowed_extensions = {'.pdf', '.ppt', '.pptx'}
+            file_ext = '.' + file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+            
+            if file_ext not in allowed_extensions:
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid file format. Only PDF and PowerPoint files are supported.'
+                }), 400
+            
+            # Read file content
+            file_content = file.read()
+            
+            # Check file size with detailed messages
+            max_size = 10 * 1024 * 1024  # 10MB hard limit
+            recommended_size = 2 * 1024 * 1024  # 2MB recommended
+            warning_size = 3 * 1024 * 1024  # 3MB warning
+            
+            file_size_mb = len(file_content) / (1024 * 1024)
+            
+            if len(file_content) > max_size:
+                return jsonify({
+                    'success': False,
+                    'message': f'File size ({file_size_mb:.1f}MB) exceeds 10MB limit. Please use a smaller file.'
+                }), 400
+            
+            # Log warning for large files
+            if len(file_content) > warning_size:
+                logger.warning(f"Large file uploaded: {file_size_mb:.1f}MB. Recommended size is 1-2MB for best results.")
+            
+            # Extract text from document
+            try:
+                from services.document_service import extract_document_content, summarize_content
+                teaching_content = extract_document_content(file.filename, file_content)
+                
+                # Use intelligent summarization that samples from entire document
+                # Adjust length based on number of questions requested
+                activity_type = request.form.get('type', 'short_answer').strip()
+                num_questions = int(request.form.get('num_questions', 1))
+                
+                # CRITICAL: Reduce input content significantly for large files
+                # to leave enough space for AI output (especially for polls)
+                # Calculate appropriate content length based on activity type
+                if activity_type == 'poll':
+                    # For poll: Much shorter input needed because output is long
+                    # Each question generates ~200 tokens output
+                    # Limit input to allow full output generation
+                    if num_questions <= 3:
+                        max_content_length = 2500  # ~600 tokens input, leaves room for 3 questions
+                    elif num_questions <= 5:
+                        max_content_length = 2000  # ~500 tokens input, leaves room for 5 questions
+                    else:
+                        max_content_length = 1500  # ~400 tokens input, leaves room for 10 questions
+                else:
+                    # For other types: 3000 chars is sufficient (output is shorter)
+                    max_content_length = 3000
+                
+                teaching_content = summarize_content(teaching_content, max_length=max_content_length)
+                
+                logger.info(f"Extracted {len(teaching_content)} characters from {file.filename} (file size: {len(file_content)} bytes)")
+                logger.info(f"Activity type: {activity_type}, num_questions: {num_questions}, content_length: {len(teaching_content)}")
+                
+                if not teaching_content or len(teaching_content) < 50:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Could not extract meaningful content from file. Please check the file format.'
+                    }), 400
+                
+            except Exception as e:
+                logger.error(f"Document extraction error: {e}")
+                import traceback
+                traceback.print_exc()
+                return jsonify({
+                    'success': False,
+                    'message': f'Failed to extract content from file: {str(e)}'
+                }), 400
+            
+            course_id = request.form.get('course_id', '').strip()
+            
+        else:
+            # Handle text content (original functionality)
+            data = request.get_json() if request.is_json else request.form
+            teaching_content = data.get('teaching_content', '').strip()
+            activity_type = data.get('type', 'short_answer').strip()
+            course_id = data.get('course_id', '').strip()
+            num_questions = int(data.get('num_questions', 1))
         
         if not teaching_content:
             return jsonify({
@@ -194,8 +319,20 @@ def ai_generate_activity():
             }), 403
         
         # Generate activity using AI
-        logger.info(f"Generating AI activity for: {teaching_content} ({activity_type}, {num_questions} questions)")
-        generated = genai_service.generate_activity(teaching_content, activity_type, num_questions)
+        logger.info(f"Generating AI activity for: {teaching_content[:100]}... ({activity_type}, {num_questions} questions)")
+        logger.info(f"Content length: {len(teaching_content)} characters")
+        
+        try:
+            generated = genai_service.generate_activity(teaching_content, activity_type, num_questions)
+            logger.info(f"AI generation successful. Activity type: {generated.get('activity_type')}")
+        except Exception as gen_error:
+            logger.error(f"AI generation error: {gen_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'message': f'AI generation failed: {str(gen_error)}'
+            }), 500
         
         # Mark as AI generated
         generated['ai_generated'] = True
@@ -210,9 +347,11 @@ def ai_generate_activity():
         
     except Exception as e:
         logger.error(f"AI generate activity error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'message': 'Failed to generate activity. Please try again.'
+            'message': f'Failed to generate activity: {str(e)}'
         }), 500
 
 @activity_bp.route('/activity/<activity_id>')
@@ -285,6 +424,14 @@ def activity_detail(activity_id):
         # Just pass whether grouping is available
         has_grouped_answers = activity.get('grouped_answers') is not None
         
+        # Add deadline info for teacher (info only, doesn't restrict teacher access)
+        is_expired = Activity.is_expired(activity)
+        deadline_display = None
+        if activity.get('deadline'):
+            utc_deadline = activity['deadline']
+            hk_deadline = utc_deadline + timedelta(hours=8)
+            deadline_display = hk_deadline
+        
         print("DEBUG: Rendering template...")
         return render_template(
             'activity_detail.html',
@@ -293,7 +440,9 @@ def activity_detail(activity_id):
             response_count=response_count,
             enrolled_count=enrolled_count,
             participation_rate=participation_rate,
-            has_grouped_answers=has_grouped_answers
+            has_grouped_answers=has_grouped_answers,
+            is_expired=is_expired,
+            deadline_display=deadline_display
         )
         
     except Exception as e:
@@ -364,6 +513,13 @@ def submit_response(activity_id):
             return jsonify({
                 'success': False,
                 'message': 'Activity is no longer active'
+            }), 410
+        
+        # Check if activity has expired
+        if Activity.is_expired(activity):
+            return jsonify({
+                'success': False,
+                'message': 'This activity has passed its deadline and is no longer accepting responses'
             }), 410
         
         data = request.get_json() if request.is_json else request.form

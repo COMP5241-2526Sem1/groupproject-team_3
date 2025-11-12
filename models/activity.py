@@ -21,7 +21,7 @@ class Activity:
     TYPE_SHORT_ANSWER = 'short_answer'
     TYPE_WORD_CLOUD = 'word_cloud'
     
-    def __init__(self, title, activity_type, content, course_id, teacher_id):
+    def __init__(self, title, activity_type, content, course_id, teacher_id, deadline=None):
         """
         Initialize activity object
         
@@ -31,6 +31,7 @@ class Activity:
             content (dict): Activity content (questions, options, etc.)
             course_id (str): ID of the course
             teacher_id (str): ID of the teacher who created the activity
+            deadline (datetime, optional): Activity deadline. Students cannot participate after this time.
         """
         self.title = title
         self.type = activity_type
@@ -43,6 +44,7 @@ class Activity:
         self.updated_at = datetime.utcnow()
         self.active = True
         self.ai_generated = content.get('ai_generated', False)
+        self.deadline = deadline  # Optional deadline for activity completion
     
     def _generate_unique_link(self):
         """
@@ -68,7 +70,8 @@ class Activity:
             'created_at': self.created_at,
             'updated_at': self.updated_at,
             'active': self.active,
-            'ai_generated': self.ai_generated
+            'ai_generated': self.ai_generated,
+            'deadline': self.deadline
         }
     
     def save(self):
@@ -80,6 +83,24 @@ class Activity:
         """
         result = db_service.insert_one(Activity.COLLECTION_NAME, self.to_dict())
         return str(result.inserted_id)
+    
+    @staticmethod
+    def is_expired(activity):
+        """
+        Check if activity has passed its deadline
+        
+        Args:
+            activity (dict): Activity document
+            
+        Returns:
+            bool: True if activity has deadline and it has passed, False otherwise
+        """
+        deadline = activity.get('deadline')
+        if deadline is None:
+            return False  # No deadline means never expires
+        
+        # Compare with current UTC time
+        return datetime.utcnow() > deadline
     
     @staticmethod
     def find_by_id(activity_id):

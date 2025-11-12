@@ -181,3 +181,29 @@ class User:
             int: Number of teachers
         """
         return db_service.count_documents(User.COLLECTION_NAME, {'role': 'teacher'})
+
+    @staticmethod
+    def update_user(user_id, update_data):
+        """
+        Update user information
+        
+        Args:
+            user_id (str or ObjectId): User ID
+            update_data (dict): Data to update
+            
+        Returns:
+            bool: Success status
+        """
+        # Convert to ObjectId if it's a string
+        if isinstance(user_id, str):
+            try:
+                user_id = ObjectId(user_id)
+            except:
+                return False
+        
+        # Update the user document
+        return db_service.update_one(
+            User.COLLECTION_NAME,
+            {'_id': user_id},
+            {'$set': update_data}
+        )

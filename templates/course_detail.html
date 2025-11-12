@@ -97,6 +97,15 @@
                     </p>
                     {% endif %}
                     
+                    {% if activity.deadline_display %}
+                    <p style="font-size: 0.875rem; margin: 0.5rem 0; {% if activity.is_expired %}color: #dc2626;{% else %}color: #f59e0b;{% endif %}">
+                        ⏰ Deadline: {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') }} (HKT)
+                        {% if activity.is_expired %}
+                        <span style="background: #dc2626; color: white; padding: 0.125rem 0.5rem; border-radius: 4px; margin-left: 0.5rem;">Expired</span>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                    
                     <div class="flex gap-2 mt-3">
                         <a href="{{ url_for('activity.activity_detail', activity_id=activity._id) }}" 
                            class="btn btn-primary btn-sm">
@@ -105,6 +114,10 @@
                         <button onclick="copyActivityLink('{{ activity.link }}')" 
                                 class="btn btn-secondary btn-sm">
                             📋 Copy Link
+                        </button>
+                        <button onclick="deleteActivity('{{ activity._id }}', '{{ activity.title }}')" 
+                                class="btn btn-danger btn-sm">
+                            🗑️ Delete
                         </button>
                     </div>
                 </div>
@@ -227,5 +240,37 @@ document.getElementById('csvUploadForm').addEventListener('submit', async (e) =>
         showAlert('Failed to upload CSV', 'danger');
     }
 });
+
+// Delete activity function
+async function deleteActivity(activityId, activityTitle) {
+    if (!confirm(`Are you sure you want to delete "${activityTitle}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const response = await fetch(`/activity/${activityId}/delete`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        hideLoading();
+        
+        if (result.success) {
+            showAlert('Activity deleted successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert(result.message || 'Failed to delete activity', 'danger');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Failed to delete activity', 'danger');
+        console.error('Delete error:', error);
+    }
+}
 </script>
 {% endblock %}

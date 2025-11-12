@@ -119,10 +119,21 @@
                                 <span class="course-badge">{{ activity.course_code }}</span>
                                 <span class="type-badge">{{ activity.type|replace('_', ' ')|title }}</span>
                             </p>
+                            {% if activity.deadline_display %}
+                            <p class="deadline-info" style="font-size: 0.85rem; margin-top: 0.25rem;">
+                                {% if activity.is_expired %}
+                                <span style="color: #dc2626;">⏰ Expired: {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') }} (HKT)</span>
+                                {% else %}
+                                <span style="color: #f59e0b;">⏰ Due: {{ activity.deadline_display.strftime('%Y-%m-%d %H:%M') }} (HKT)</span>
+                                {% endif %}
+                            </p>
+                            {% endif %}
                         </div>
                         <div class="activity-actions">
                             {% if activity.completed %}
                                 <span class="status-badge status-completed">✓ Completed</span>
+                            {% elif activity.is_expired %}
+                                <span class="status-badge" style="background: #dc2626;">🔒 Expired</span>
                             {% else %}
                                 <span class="status-badge status-pending">⏳ Pending</span>
                                 <a href="{{ url_for('student.view_activity', activity_id=activity._id) }}" 

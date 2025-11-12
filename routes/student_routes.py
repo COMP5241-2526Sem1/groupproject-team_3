@@ -11,6 +11,7 @@ from models.activity import Activity
 from models.student import Student
 from services.db_service import db_service
 from bson import ObjectId
+from datetime import datetime, timedelta
 import logging
 
 # Configure logging
@@ -72,6 +73,15 @@ def dashboard():
                                            if r.get('student_id') == user.get('student_id')), None)
                     is_completed = student_response is not None
                     
+                    # Check if activity is expired
+                    is_expired = Activity.is_expired(activity)
+                    
+                    # Convert deadline to HK time for display
+                    if activity.get('deadline'):
+                        utc_deadline = activity['deadline']
+                        hk_deadline = utc_deadline + timedelta(hours=8)
+                        activity['deadline_display'] = hk_deadline
+                    
                     if is_completed:
                         course_completed += 1
                         completed_activities += 1
@@ -81,6 +91,7 @@ def dashboard():
                         activity['course_name'] = course.get('name')
                         activity['course_code'] = course.get('code')
                         activity['completed'] = is_completed
+                        activity['is_expired'] = is_expired
                         recent_activities.append(activity)
                 
                 course['activity_count'] = len(activities)
@@ -150,6 +161,13 @@ def course_detail(course_id):
                                       r.get('student_name') == username), None)
             activity['student_response'] = student_response
             activity['has_responded'] = student_response is not None
+            
+            # Check if activity is expired and convert deadline to HK time
+            activity['is_expired'] = Activity.is_expired(activity)
+            if activity.get('deadline'):
+                utc_deadline = activity['deadline']
+                hk_deadline = utc_deadline + timedelta(hours=8)
+                activity['deadline_display'] = hk_deadline
         
         # Get teacher info
         teacher = User.find_by_id(course.get('teacher_id'))
@@ -277,6 +295,16 @@ def view_activity(activity_id):
             return render_template('error.html', 
                 message='You must be enrolled in the course to access this activity'), 403
         
+        # Check if activity has expired
+        is_expired = Activity.is_expired(activity)
+        
+        # Convert deadline from UTC to Hong Kong time (UTC+8) for display
+        if activity.get('deadline'):
+            from datetime import timedelta
+            utc_deadline = activity['deadline']
+            hk_deadline = utc_deadline + timedelta(hours=8)
+            activity['deadline_display'] = hk_deadline
+        
         # Check if student has already responded
         student_id = user.get('student_id')
         username = user.get('username')
@@ -290,7 +318,8 @@ def view_activity(activity_id):
             activity=activity,
             course=course,
             student_response=student_response,
-            has_responded=student_response is not None
+            has_responded=student_response is not None,
+            is_expired=is_expired
         )
         
     except Exception as e:
@@ -455,9 +484,17 @@ def my_activities():
                 student_response = next((r for r in responses 
                                        if r.get('student_id') == user.get('student_id')), None)
                 
+                # Check if expired and convert deadline to HK time
+                is_expired = Activity.is_expired(activity)
+                if activity.get('deadline'):
+                    utc_deadline = activity['deadline']
+                    hk_deadline = utc_deadline + timedelta(hours=8)
+                    activity['deadline_display'] = hk_deadline
+                
                 activity['course_name'] = course.get('name')
                 activity['course_code'] = course.get('code')
                 activity['completed'] = student_response is not None
+                activity['is_expired'] = is_expired
                 activity['response_count'] = len(responses)
                 all_activities.append(activity)
         
@@ -563,12 +600,14 @@ def leaderboard():
             logger.error(f"Error getting achievements: {e}")
             achievements = []
         
-        # Find student's global rank - use student_identifier
+        # Find student's global rank and points - use student_identifier
         my_global_rank = None
+        global_my_points = 0
         try:
             for i, entry in enumerate(global_leaderboard):
                 if entry.get('student_id') == student_identifier:
                     my_global_rank = i + 1
+                    global_my_points = entry.get('points', 0)
                     break
         except Exception as e:
             logger.error(f"Error finding global rank: {e}")
@@ -580,6 +619,7 @@ def leaderboard():
             global_leaderboard=global_leaderboard,
             my_course_ranks=my_course_ranks,
             my_global_rank=my_global_rank,
+            global_my_points=global_my_points,
             overall_points=overall_points,
             achievements=achievements
         )

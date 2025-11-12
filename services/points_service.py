@@ -171,40 +171,50 @@ class PointsService:
     def get_global_leaderboard(limit=100):
         """
         Get global leaderboard across all courses
+        Uses the same point calculation as "My Stats" - total points across all activities
         
         Args:
             limit (int): Maximum number of students to return
             
         Returns:
-            list: Ranked list of students with their points
+            list: Ranked list of students with their total points across all courses
         """
         try:
             # Get all students
             students = db_service.find_many(Student.COLLECTION_NAME, {})
             
-            leaderboard = []
+            # Dictionary to store unique students by student_id
+            student_map = {}
             
             for student in students:
                 student_id = student.get('student_id')
                 student_name = student.get('name', 'Anonymous')
-                course_id = student.get('course_id')
                 
-                # Calculate points (all courses)
+                # Skip if student_id is missing
+                if not student_id:
+                    continue
+                
+                # Store only once per unique student_id
+                if student_id not in student_map:
+                    student_map[student_id] = {
+                        'student_id': student_id,
+                        'name': student_name
+                    }
+            
+            # Calculate points for each unique student
+            leaderboard = []
+            for student_id, student_data in student_map.items():
+                # Calculate total points across ALL courses (same as My Stats)
                 points_data = PointsService.calculate_student_points(student_id)
+                total_points = points_data['total']
                 
-                # Count activities completed
+                # Count activities completed across ALL courses
                 activities_count = PointsService.count_student_activities(student_id)
                 
-                # Get course name
-                course = Course.find_by_id(course_id)
-                course_name = course.get('name', 'Unknown') if course else 'Unknown'
-                
                 leaderboard.append({
-                    '_id': student.get('_id'),
                     'student_id': student_id,
-                    'name': student_name,
-                    'course_name': course_name,
-                    'points': points_data['total'],
+                    'name': student_data['name'],
+                    'points': total_points,
                     'activities_completed': activities_count,
                     'rank': 0  # Will be set after sorting
                 })

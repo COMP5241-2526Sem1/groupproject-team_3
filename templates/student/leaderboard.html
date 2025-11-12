@@ -368,18 +368,28 @@
     <div id="tab-global" class="tab-content">
         <div class="card">
             <div class="card-header">
-                <h2>🌍 Global Rankings</h2>
+                <h2>🌍 Global Rankings - All Courses Combined</h2>
+                <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 0.9rem;">
+                    Rankings based on total points earned across all courses
+                </p>
             </div>
             <div class="card-body">
                 {% if global_leaderboard and global_leaderboard|length > 0 %}
+                
+                {% if global_my_rank %}
+                <div class="my-rank-card" style="margin-bottom: 1.5rem;">
+                    <h4>Your Global Rank: #{{ global_my_rank }} / {{ global_leaderboard|length }}</h4>
+                    <p>Total Points: {{ global_my_points or 0 }} pts</p>
+                </div>
+                {% endif %}
+                
                 <table class="leaderboard-table">
                     <thead>
                         <tr>
                             <th style="width: 80px;">Rank</th>
                             <th>Student</th>
-                            <th>Course</th>
-                            <th style="width: 150px;">Activities</th>
-                            <th style="width: 150px;">Points</th>
+                            <th style="width: 150px;">Total Activities</th>
+                            <th style="width: 150px;">Total Points</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -399,8 +409,7 @@
                                 <br>
                                 <small style="color: #6b7280;">{{ entry.student_id or 'N/A' }}</small>
                             </td>
-                            <td><small>{{ entry.course_name or 'Unknown' }}</small></td>
-                            <td>{{ entry.activities_completed or 0 }}</td>
+                            <td>{{ entry.activities_completed or 0 }} completed</td>
                             <td><span class="points-badge">{{ entry.points or 0 }} pts</span></td>
                         </tr>
                         {% endfor %}

@@ -8,6 +8,7 @@ from models.course import Course
 from models.student import Student
 from models.activity import Activity
 from bson import ObjectId
+from datetime import datetime, timedelta
 import csv
 import io
 import logging
@@ -139,6 +140,13 @@ def course_detail(course_id):
         for activity in activities:
             activity['_id'] = str(activity['_id'])
             activity['response_count'] = len(activity.get('responses', []))
+            
+            # Add deadline info for teacher (info only, doesn't restrict access)
+            activity['is_expired'] = Activity.is_expired(activity)
+            if activity.get('deadline'):
+                utc_deadline = activity['deadline']
+                hk_deadline = utc_deadline + timedelta(hours=8)
+                activity['deadline_display'] = hk_deadline
         
         return render_template(
             'course_detail.html',
@@ -373,4 +381,64 @@ def delete_course(course_id):
         return jsonify({
             'success': False,
             'message': 'Failed to delete course'
+        }), 500
+
+@course_bp.route('/profile')
+@login_required
+def teacher_profile():
+    """
+    View and edit teacher profile (settings page)
+    """
+    try:
+        from models.user import User
+        user_id = session.get('user_id')
+        user = User.find_by_id(user_id)
+        
+        if not user:
+            return render_template('error.html', message='User not found'), 404
+        
+        return render_template('teacher/profile.html', user=user)
+        
+    except Exception as e:
+        logger.error(f"Error loading teacher profile: {e}")
+        return render_template('error.html', message='Failed to load profile'), 500
+
+@course_bp.route('/update-profile', methods=['POST'])
+@login_required
+def update_teacher_profile():
+    """
+    Update teacher profile information
+    """
+    try:
+        from models.user import User
+        user_id = session.get('user_id')
+        data = request.get_json() if request.is_json else request.form
+        
+        # Update user information
+        update_data = {}
+        
+        if data.get('email'):
+            update_data['email'] = data.get('email').strip()
+        
+        if data.get('name'):
+            update_data['name'] = data.get('name').strip()
+        
+        if update_data:
+            User.update_user(user_id, update_data)
+            
+            return jsonify({
+                'success': True,
+                'message': 'Profile updated successfully'
+            }), 200
+        
+        return jsonify({
+            'success': False,
+            'message': 'No data to update'
+        }), 400
+        
+    except Exception as e:
+        logger.error(f"Update teacher profile error: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to update profile'
         }), 500
