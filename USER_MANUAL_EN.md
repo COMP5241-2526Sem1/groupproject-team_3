@@ -197,8 +197,14 @@ The system uses MongoDB, a NoSQL database, for its flexible schema, which is ide
 
 #### Enrolling in a Course
 1.  Navigate to "Browse Courses".
-2.  Enter the unique **Course Code** provided by your teacher.
-3.  Click "Register" to join the course.
+2.  **Search for Courses** (Optional):
+    - Use the search box at the top to find courses by **Course Code** or **Course Name**.
+    - The system will filter and display matching courses in real-time.
+    - Search results show the number of matching courses.
+    - Click "Clear" to reset the search.
+3.  Click "✓ Enroll Now" on the desired course card.
+4.  Confirm enrollment in the popup dialog.
+5.  Upon successful enrollment, the course card will automatically disappear from the browse list.
 
 #### Participating in an Activity
 -   Access activities via your dashboard or a direct link from your teacher.
