@@ -932,14 +932,46 @@ Carol Li (2023003)
 
 ##### Word Cloud 活动:
 1. 阅读问题
-2. 输入关键词(用逗号分隔)
-3. 点击"Submit Answer"
-4. **AI 评估关键词相关性** 🤖:
-   - 评估关键词质量
-   - 分析概念理解
+2. **使用动态输入框输入关键词**:
+   - 每个输入框填入一个关键词
+   - 点击"➕ Add Keyword"按钮添加更多输入框
+   - 点击"✕"按钮删除不需要的输入框
+   - 至少保留一个关键词输入框
+3. 点击"Submit Answer"提交
+4. **AI 自动评估** 🤖:
+   - 评分(0-100)
+   - 评估关键词相关性
+   - 分析创意性
    - 提供反馈
-5. 获得积分
-6. 可以重新提交
+5. 获得积分(基于AI评分)
+6. **重新查看和编辑**:
+   - 第二次进入该活动时,可以看到之前提交的关键词和AI评价
+   - 点击"✏️ Edit Keywords"按钮重新编辑
+   - 可以修改现有关键词或添加/删除关键词
+   - 重新提交后,AI会生成新的评估
+
+**AI 评估示例**:
+```
+┌─────────────────────────────────────────────┐
+│  🤖 AI Evaluation Results                    │
+│                                              │
+│  Score: 88/100 🟢                            │
+│                                              │
+│  📝 Feedback:                                │
+│  "Your keywords demonstrate good             │
+│  understanding of the topic."                │
+│                                              │
+│  🎯 Relevance:                               │
+│  "Keywords are highly relevant to the topic" │
+│                                              │
+│  🎨 Creativity:                              │
+│  "Shows creative thinking and insight"       │
+│                                              │
+│  🌟 Keep exploring new ideas!                │
+│                                              │
+│  Points Earned: +18 🪙                       │
+└─────────────────────────────────────────────┘
+```
 
 #### 5. 排行榜 🏆
 

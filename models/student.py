@@ -6,6 +6,7 @@ Defines student data structure and operations
 from datetime import datetime
 from bson import ObjectId
 from services.db_service import db_service
+from utils.time_utils import get_hk_time
 
 class Student:
     """
@@ -28,7 +29,7 @@ class Student:
         self.name = name
         self.course_id = course_id
         self.email = email
-        self.created_at = datetime.utcnow()
+        self.created_at = get_hk_time()
     
     def to_dict(self):
         """Convert student object to dictionary"""
@@ -121,7 +122,7 @@ class Student:
             return None  # Student already enrolled in this course
         
         # Add timestamp
-        student_data['created_at'] = datetime.utcnow()
+        student_data['created_at'] = get_hk_time()
         
         # Insert new student
         result = db_service.insert_one(Student.COLLECTION_NAME, student_data)

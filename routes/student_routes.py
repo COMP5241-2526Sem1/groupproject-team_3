@@ -13,6 +13,7 @@ from services.db_service import db_service
 from bson import ObjectId
 from datetime import datetime, timedelta
 import logging
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -20,6 +21,80 @@ logger = logging.getLogger(__name__)
 
 # Create blueprint
 student_bp = Blueprint('student', __name__, url_prefix='/student')
+
+def clean_mongodb_document(doc):
+    """
+    Clean MongoDB document to remove Undefined types and make it JSON serializable
+    Converts all values to basic Python types that Jinja2 can handle
+    
+    Args:
+        doc: MongoDB document (dict or list)
+        
+    Returns:
+        Cleaned document safe for JSON serialization and template rendering
+    """
+    if doc is None:
+        return None
+    
+    # Check if the value is an Undefined type by checking its type name
+    def is_undefined(value):
+        return type(value).__name__ == 'Undefined'
+    
+    if isinstance(doc, dict):
+        cleaned = {}
+        for key, value in doc.items():
+            # Skip Undefined values
+            if is_undefined(value):
+                logger.warning(f"Skipping Undefined field: {key}")
+                continue
+            # Convert datetime to string for consistency
+            elif isinstance(value, datetime):
+                cleaned[key] = value
+            # Handle ObjectId
+            elif isinstance(value, ObjectId):
+                cleaned[key] = str(value)
+            # Recursively clean nested structures
+            elif isinstance(value, dict):
+                cleaned[key] = clean_mongodb_document(value)
+            elif isinstance(value, list):
+                cleaned[key] = clean_mongodb_document(value)
+            # For other types, test if they're JSON serializable
+            else:
+                try:
+                    json.dumps(value)
+                    cleaned[key] = value
+                except (TypeError, ValueError) as e:
+                    # Convert to string as fallback
+                    logger.warning(f"Converting non-serializable field '{key}' to string: {e}")
+                    cleaned[key] = str(value)
+        return cleaned
+    
+    elif isinstance(doc, list):
+        cleaned_list = []
+        for item in doc:
+            # Skip Undefined items
+            if is_undefined(item):
+                logger.warning(f"Skipping Undefined item in list")
+                continue
+            elif isinstance(item, (dict, list)):
+                cleaned_list.append(clean_mongodb_document(item))
+            elif isinstance(item, (datetime, ObjectId)):
+                cleaned_list.append(str(item) if isinstance(item, ObjectId) else item)
+            else:
+                try:
+                    json.dumps(item)
+                    cleaned_list.append(item)
+                except (TypeError, ValueError):
+                    # Skip items that can't be serialized
+                    logger.warning(f"Skipping non-serializable item: {type(item).__name__}")
+                    continue
+        return cleaned_list
+    
+    # For other types, check if it's Undefined
+    if is_undefined(doc):
+        return None
+    
+    return doc
 
 def student_required(f):
     """Decorator to ensure user is logged in as student"""
@@ -305,13 +380,25 @@ def view_activity(activity_id):
             hk_deadline = utc_deadline + timedelta(hours=8)
             activity['deadline_display'] = hk_deadline
         
-        # Check if student has already responded
+        # Clean all documents FIRST before processing
+        activity = clean_mongodb_document(activity)
+        course = clean_mongodb_document(course)
+        user = clean_mongodb_document(user)
+        
+        # Check if student has already responded (use cleaned activity)
         student_id = user.get('student_id')
         username = user.get('username')
         responses = activity.get('responses', [])
         student_response = next((r for r in responses 
                                if r.get('student_id') == student_id or
                                   r.get('student_name') == username), None)
+        
+        # Log response info
+        if student_response:
+            logger.info(f"Student response found for activity {activity_id}")
+            if student_response and 'ai_evaluation' in student_response:
+                ai_eval = student_response.get('ai_evaluation')
+                logger.info(f"AI evaluation type: {type(ai_eval)}, keys: {ai_eval.keys() if isinstance(ai_eval, dict) else 'N/A'}")
         
         return render_template('student/activity.html',
             user=user,
@@ -323,9 +410,12 @@ def view_activity(activity_id):
         )
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logger.error(f"Error viewing activity: {e}")
+        logger.error(f"Traceback: {error_details}")
         return render_template('error.html', 
-            message='Failed to load activity'), 500
+            message=f'Failed to load activity: {str(e)}'), 500
 
 @student_bp.route('/my-responses')
 @student_required

@@ -209,8 +209,14 @@ The system uses MongoDB, a NoSQL database, for its flexible schema, which is ide
 #### Participating in an Activity
 -   Access activities via your dashboard or a direct link from your teacher.
 -   **Polls**: Select your answer and submit. You'll see immediately if you were correct.
--   **Short Answers**: Type your response and submit. The AI will evaluate it instantly and provide detailed feedback and a score.
--   **Word Clouds**: Enter relevant keywords and submit.
+-   **Short Answers**: Type your response and submit. The AI will evaluate it instantly and provide detailed feedback and a score. You can re-edit your answer to get a new AI evaluation.
+-   **Word Clouds**: 
+    -   Enter one keyword per input field
+    -   Click "➕ Add Keyword" button to add more input fields
+    -   Click "✕" button to remove unwanted fields
+    -   Submit to receive AI evaluation with score, relevance analysis, and creativity feedback
+    -   Re-enter the activity to view your previous keywords and AI evaluation
+    -   Click "✏️ Edit Keywords" to modify and resubmit for new AI evaluation
 
 #### Leaderboard & Profile
 -   **Leaderboard**: See how you rank against your classmates in a course-specific leaderboard based on total points.

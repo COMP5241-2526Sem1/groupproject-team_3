@@ -6,6 +6,7 @@ Defines course data structure and operations
 from datetime import datetime
 from bson import ObjectId
 from services.db_service import db_service
+from utils.time_utils import get_hk_time
 
 class Course:
     """
@@ -29,8 +30,8 @@ class Course:
         self.teacher_id = teacher_id
         self.description = description
         self.students = []
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.created_at = get_hk_time()
+        self.updated_at = get_hk_time()
         self.active = True
     
     def to_dict(self):
@@ -117,7 +118,7 @@ class Course:
         Returns:
             bool: True if successful
         """
-        update_data['updated_at'] = datetime.utcnow()
+        update_data['updated_at'] = get_hk_time()
         result = db_service.update_one(
             Course.COLLECTION_NAME,
             {'_id': ObjectId(course_id)},
