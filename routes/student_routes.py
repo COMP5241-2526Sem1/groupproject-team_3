@@ -21,6 +21,39 @@ logger = logging.getLogger(__name__)
 # Create blueprint
 student_bp = Blueprint('student', __name__, url_prefix='/student')
 
+def clean_mongodb_document(doc):
+    """
+    Clean MongoDB document to remove Undefined types and make it JSON serializable
+    
+    Args:
+        doc: MongoDB document (dict or list)
+        
+    Returns:
+        Cleaned document safe for JSON serialization
+    """
+    from bson import Undefined
+    
+    if doc is None:
+        return None
+    
+    if isinstance(doc, dict):
+        cleaned = {}
+        for key, value in doc.items():
+            # Skip Undefined values
+            if isinstance(value, Undefined):
+                continue
+            # Recursively clean nested structures
+            elif isinstance(value, (dict, list)):
+                cleaned[key] = clean_mongodb_document(value)
+            else:
+                cleaned[key] = value
+        return cleaned
+    
+    elif isinstance(doc, list):
+        return [clean_mongodb_document(item) for item in doc if not isinstance(item, Undefined)]
+    
+    return doc
+
 def student_required(f):
     """Decorator to ensure user is logged in as student"""
     @wraps(f)
@@ -313,12 +346,18 @@ def view_activity(activity_id):
                                if r.get('student_id') == student_id or
                                   r.get('student_name') == username), None)
         
-        # Debug log for AI evaluation structure
+        # Clean student response to remove any Undefined types
         if student_response:
+            student_response = clean_mongodb_document(student_response)
             logger.info(f"Student response found for activity {activity_id}")
-            if 'ai_evaluation' in student_response:
-                ai_eval = student_response['ai_evaluation']
+            if student_response and 'ai_evaluation' in student_response:
+                ai_eval = student_response.get('ai_evaluation')
                 logger.info(f"AI evaluation type: {type(ai_eval)}, keys: {ai_eval.keys() if isinstance(ai_eval, dict) else 'N/A'}")
+        
+        # Also clean activity and course documents
+        activity = clean_mongodb_document(activity)
+        course = clean_mongodb_document(course)
+        user = clean_mongodb_document(user)
         
         return render_template('student/activity.html',
             user=user,
