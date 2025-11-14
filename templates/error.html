@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Error {{ error_code }}{% endblock %}
+{% block title %}Error{% endblock %}
 
 {% block content %}
 <div class="container" style="max-width: 600px; margin-top: 4rem;">
@@ -12,9 +12,9 @@
             {% else %}❌{% endif %}
         </div>
         
-        <h1>Error {{ error_code }}</h1>
+        <h1>{% if error_code %}Error {{ error_code }}{% else %}Error{% endif %}</h1>
         <p style="font-size: 1.25rem; color: #6b7280; margin: 1.5rem 0;">
-            {{ error_message }}
+            {{ error_message or message or 'An error occurred' }}
         </p>
         
         <div class="flex gap-2 flex-center mt-4">
