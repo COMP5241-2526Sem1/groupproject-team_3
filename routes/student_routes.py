@@ -13,6 +13,7 @@ from services.db_service import db_service
 from bson import ObjectId
 from datetime import datetime, timedelta
 import logging
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,12 +25,13 @@ student_bp = Blueprint('student', __name__, url_prefix='/student')
 def clean_mongodb_document(doc):
     """
     Clean MongoDB document to remove Undefined types and make it JSON serializable
+    Converts all values to basic Python types that Jinja2 can handle
     
     Args:
         doc: MongoDB document (dict or list)
         
     Returns:
-        Cleaned document safe for JSON serialization
+        Cleaned document safe for JSON serialization and template rendering
     """
     if doc is None:
         return None
@@ -37,34 +39,42 @@ def clean_mongodb_document(doc):
     if isinstance(doc, dict):
         cleaned = {}
         for key, value in doc.items():
-            # Skip any problematic types by trying to serialize
-            try:
-                import json
-                json.dumps(value, default=str)
-                # If successful, recursively clean
-                if isinstance(value, (dict, list)):
-                    cleaned[key] = clean_mongodb_document(value)
-                else:
+            # Convert datetime to string for consistency
+            if isinstance(value, datetime):
+                cleaned[key] = value
+            # Handle ObjectId
+            elif isinstance(value, ObjectId):
+                cleaned[key] = str(value)
+            # Recursively clean nested structures
+            elif isinstance(value, dict):
+                cleaned[key] = clean_mongodb_document(value)
+            elif isinstance(value, list):
+                cleaned[key] = clean_mongodb_document(value)
+            # For other types, test if they're JSON serializable
+            else:
+                try:
+                    json.dumps(value)
                     cleaned[key] = value
-            except (TypeError, ValueError):
-                # Skip fields that can't be serialized
-                logger.warning(f"Skipping non-serializable field: {key}")
-                continue
+                except (TypeError, ValueError):
+                    # Convert to string as fallback
+                    logger.warning(f"Converting non-serializable field '{key}' to string")
+                    cleaned[key] = str(value)
         return cleaned
     
     elif isinstance(doc, list):
         cleaned_list = []
         for item in doc:
-            try:
-                import json
-                json.dumps(item, default=str)
-                if isinstance(item, (dict, list)):
-                    cleaned_list.append(clean_mongodb_document(item))
-                else:
+            if isinstance(item, (dict, list)):
+                cleaned_list.append(clean_mongodb_document(item))
+            elif isinstance(item, (datetime, ObjectId)):
+                cleaned_list.append(str(item) if isinstance(item, ObjectId) else item)
+            else:
+                try:
+                    json.dumps(item)
                     cleaned_list.append(item)
-            except (TypeError, ValueError):
-                # Skip items that can't be serialized
-                continue
+                except (TypeError, ValueError):
+                    # Convert to string as fallback
+                    cleaned_list.append(str(item))
         return cleaned_list
     
     return doc
