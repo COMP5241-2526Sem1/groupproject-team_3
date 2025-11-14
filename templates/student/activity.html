@@ -647,8 +647,14 @@ function enableEdit(activityType) {
         document.getElementById('answerText').dispatchEvent(new Event('input'));
         
     } else if (activityType === 'word_cloud') {
-        // Store original data
-        originalData = {{ student_response.keywords | tojson }};
+        // Store original data - manually build array to avoid tojson issues
+        originalData = [
+            {% if student_response.keywords %}
+                {% for keyword in student_response.keywords %}
+                    {% if keyword %}{{ keyword | tojson }}{{ "," if not loop.last else "" }}{% endif %}
+                {% endfor %}
+            {% endif %}
+        ];
         
         // Hide display and AI evaluation if exists
         document.getElementById('displayKeywords').style.display = 'none';
