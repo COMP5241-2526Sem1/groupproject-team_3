@@ -36,11 +36,19 @@ def clean_mongodb_document(doc):
     if doc is None:
         return None
     
+    # Check if the value is an Undefined type by checking its type name
+    def is_undefined(value):
+        return type(value).__name__ == 'Undefined'
+    
     if isinstance(doc, dict):
         cleaned = {}
         for key, value in doc.items():
+            # Skip Undefined values
+            if is_undefined(value):
+                logger.warning(f"Skipping Undefined field: {key}")
+                continue
             # Convert datetime to string for consistency
-            if isinstance(value, datetime):
+            elif isinstance(value, datetime):
                 cleaned[key] = value
             # Handle ObjectId
             elif isinstance(value, ObjectId):
@@ -55,16 +63,20 @@ def clean_mongodb_document(doc):
                 try:
                     json.dumps(value)
                     cleaned[key] = value
-                except (TypeError, ValueError):
+                except (TypeError, ValueError) as e:
                     # Convert to string as fallback
-                    logger.warning(f"Converting non-serializable field '{key}' to string")
+                    logger.warning(f"Converting non-serializable field '{key}' to string: {e}")
                     cleaned[key] = str(value)
         return cleaned
     
     elif isinstance(doc, list):
         cleaned_list = []
         for item in doc:
-            if isinstance(item, (dict, list)):
+            # Skip Undefined items
+            if is_undefined(item):
+                logger.warning(f"Skipping Undefined item in list")
+                continue
+            elif isinstance(item, (dict, list)):
                 cleaned_list.append(clean_mongodb_document(item))
             elif isinstance(item, (datetime, ObjectId)):
                 cleaned_list.append(str(item) if isinstance(item, ObjectId) else item)
@@ -73,9 +85,14 @@ def clean_mongodb_document(doc):
                     json.dumps(item)
                     cleaned_list.append(item)
                 except (TypeError, ValueError):
-                    # Convert to string as fallback
-                    cleaned_list.append(str(item))
+                    # Skip items that can't be serialized
+                    logger.warning(f"Skipping non-serializable item: {type(item).__name__}")
+                    continue
         return cleaned_list
+    
+    # For other types, check if it's Undefined
+    if is_undefined(doc):
+        return None
     
     return doc
 
