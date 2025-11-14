@@ -76,46 +76,48 @@
                         </div>
                         
                         <!-- AI Evaluation Display for Short Answer -->
-                        {% if student_response.ai_evaluation %}
+                        {% if student_response.ai_evaluation and student_response.ai_evaluation.get('score') is not none %}
                         <div id="aiEvaluationDisplay" style="margin-top: 1.5rem;">
                             <div style="background: #f0f9ff; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 1rem;">
                                 <h3 style="color: #1e40af; margin-top: 0; font-size: 1.1rem;">🤖 AI Evaluation</h3>
-                                <p style="font-size: 1.2rem; margin: 0.5rem 0; color: {{ '#10b981' if student_response.ai_evaluation.score >= 80 else '#f59e0b' if student_response.ai_evaluation.score >= 60 else '#ef4444' }};">
-                                    <strong>Score: {{ student_response.ai_evaluation.score }}/100</strong>
+                                <p style="font-size: 1.2rem; margin: 0.5rem 0; color: {{ '#10b981' if student_response.ai_evaluation.get('score', 0) >= 80 else '#f59e0b' if student_response.ai_evaluation.get('score', 0) >= 60 else '#ef4444' }};">
+                                    <strong>Score: {{ student_response.ai_evaluation.get('score', 0) }}/100</strong>
                                 </p>
                             </div>
                             
+                            {% if student_response.ai_evaluation.get('feedback') %}
                             <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10b981; margin-bottom: 1rem;">
                                 <h4 style="color: #065f46; margin-top: 0; font-size: 1rem;">📝 Feedback</h4>
-                                <p style="margin: 0;">{{ student_response.ai_evaluation.feedback }}</p>
+                                <p style="margin: 0;">{{ student_response.ai_evaluation.get('feedback') }}</p>
                             </div>
+                            {% endif %}
                             
-                            {% if student_response.ai_evaluation.strengths %}
+                            {% if student_response.ai_evaluation.get('strengths') %}
                             <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10b981; margin-bottom: 1rem;">
                                 <h4 style="color: #065f46; margin-top: 0; font-size: 1rem;">✅ Strengths</h4>
                                 <ul style="margin: 0;">
-                                    {% for strength in student_response.ai_evaluation.strengths %}
+                                    {% for strength in student_response.ai_evaluation.get('strengths', []) %}
                                     <li>{{ strength }}</li>
                                     {% endfor %}
                                 </ul>
                             </div>
                             {% endif %}
                             
-                            {% if student_response.ai_evaluation.improvements %}
+                            {% if student_response.ai_evaluation.get('improvements') %}
                             <div style="background: #fef3c7; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 1rem;">
                                 <h4 style="color: #92400e; margin-top: 0; font-size: 1rem;">💡 Areas for Improvement</h4>
                                 <ul style="margin: 0;">
-                                    {% for improvement in student_response.ai_evaluation.improvements %}
+                                    {% for improvement in student_response.ai_evaluation.get('improvements', []) %}
                                     <li>{{ improvement }}</li>
                                     {% endfor %}
                                 </ul>
                             </div>
                             {% endif %}
                             
-                            {% if student_response.ai_evaluation.encouragement %}
+                            {% if student_response.ai_evaluation.get('encouragement') %}
                             <div style="background: linear-gradient(135deg, #fef3c7, #fce7f3); padding: 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
                                 <p style="margin: 0; font-size: 1.1rem; color: #831843;">
-                                    <strong>✨ {{ student_response.ai_evaluation.encouragement }}</strong>
+                                    <strong>✨ {{ student_response.ai_evaluation.get('encouragement') }}</strong>
                                 </p>
                             </div>
                             {% endif %}
@@ -134,38 +136,40 @@
                         </div>
                         
                         <!-- AI Evaluation Display for Word Cloud -->
-                        {% if student_response.ai_evaluation %}
+                        {% if student_response.ai_evaluation and student_response.ai_evaluation.get('score') is not none %}
                         <div id="aiEvaluationDisplay" style="margin-top: 1.5rem;">
                             <div style="background: #f0f9ff; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 1rem;">
                                 <h3 style="color: #1e40af; margin-top: 0; font-size: 1.1rem;">🤖 AI Evaluation</h3>
-                                <p style="font-size: 1.2rem; margin: 0.5rem 0; color: {{ '#10b981' if student_response.ai_evaluation.score >= 80 else '#f59e0b' if student_response.ai_evaluation.score >= 60 else '#ef4444' }};">
-                                    <strong>Score: {{ student_response.ai_evaluation.score }}/100</strong>
+                                <p style="font-size: 1.2rem; margin: 0.5rem 0; color: {{ '#10b981' if student_response.ai_evaluation.get('score', 0) >= 80 else '#f59e0b' if student_response.ai_evaluation.get('score', 0) >= 60 else '#ef4444' }};">
+                                    <strong>Score: {{ student_response.ai_evaluation.get('score', 0) }}/100</strong>
                                 </p>
                             </div>
                             
+                            {% if student_response.ai_evaluation.get('feedback') %}
                             <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10b981; margin-bottom: 1rem;">
                                 <h4 style="color: #065f46; margin-top: 0; font-size: 1rem;">📝 Feedback</h4>
-                                <p style="margin: 0;">{{ student_response.ai_evaluation.feedback }}</p>
+                                <p style="margin: 0;">{{ student_response.ai_evaluation.get('feedback') }}</p>
                             </div>
+                            {% endif %}
                             
-                            {% if student_response.ai_evaluation.relevance %}
+                            {% if student_response.ai_evaluation.get('relevance') %}
                             <div style="background: #faf5ff; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #a855f7; margin-bottom: 1rem;">
                                 <h4 style="color: #6b21a8; margin-top: 0; font-size: 1rem;">🎯 Relevance</h4>
-                                <p style="margin: 0;">{{ student_response.ai_evaluation.relevance }}</p>
+                                <p style="margin: 0;">{{ student_response.ai_evaluation.get('relevance') }}</p>
                             </div>
                             {% endif %}
                             
-                            {% if student_response.ai_evaluation.creativity %}
+                            {% if student_response.ai_evaluation.get('creativity') %}
                             <div style="background: #faf5ff; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #a855f7; margin-bottom: 1rem;">
                                 <h4 style="color: #6b21a8; margin-top: 0; font-size: 1rem;">🎨 Creativity</h4>
-                                <p style="margin: 0;">{{ student_response.ai_evaluation.creativity }}</p>
+                                <p style="margin: 0;">{{ student_response.ai_evaluation.get('creativity') }}</p>
                             </div>
                             {% endif %}
                             
-                            {% if student_response.ai_evaluation.encouragement %}
+                            {% if student_response.ai_evaluation.get('encouragement') %}
                             <div style="background: linear-gradient(135deg, #fef3c7, #fce7f3); padding: 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
                                 <p style="margin: 0; font-size: 1.1rem; color: #831843;">
-                                    <strong>✨ {{ student_response.ai_evaluation.encouragement }}</strong>
+                                    <strong>✨ {{ student_response.ai_evaluation.get('encouragement') }}</strong>
                                 </p>
                             </div>
                             {% endif %}
