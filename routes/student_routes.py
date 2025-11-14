@@ -31,26 +31,41 @@ def clean_mongodb_document(doc):
     Returns:
         Cleaned document safe for JSON serialization
     """
-    from bson import Undefined
-    
     if doc is None:
         return None
     
     if isinstance(doc, dict):
         cleaned = {}
         for key, value in doc.items():
-            # Skip Undefined values
-            if isinstance(value, Undefined):
+            # Skip any problematic types by trying to serialize
+            try:
+                import json
+                json.dumps(value, default=str)
+                # If successful, recursively clean
+                if isinstance(value, (dict, list)):
+                    cleaned[key] = clean_mongodb_document(value)
+                else:
+                    cleaned[key] = value
+            except (TypeError, ValueError):
+                # Skip fields that can't be serialized
+                logger.warning(f"Skipping non-serializable field: {key}")
                 continue
-            # Recursively clean nested structures
-            elif isinstance(value, (dict, list)):
-                cleaned[key] = clean_mongodb_document(value)
-            else:
-                cleaned[key] = value
         return cleaned
     
     elif isinstance(doc, list):
-        return [clean_mongodb_document(item) for item in doc if not isinstance(item, Undefined)]
+        cleaned_list = []
+        for item in doc:
+            try:
+                import json
+                json.dumps(item, default=str)
+                if isinstance(item, (dict, list)):
+                    cleaned_list.append(clean_mongodb_document(item))
+                else:
+                    cleaned_list.append(item)
+            except (TypeError, ValueError):
+                # Skip items that can't be serialized
+                continue
+        return cleaned_list
     
     return doc
 
