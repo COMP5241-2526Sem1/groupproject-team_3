@@ -28,7 +28,7 @@ pip install -r requirements.txt
 ### 4️⃣ 配置 .env 文件
 创建 `.env` 文件，添加：
 ```env
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
 DB_NAME=learning_platform
 SECRET_KEY=your_secret_key_here
 FLASK_ENV=development
@@ -85,7 +85,7 @@ pip install -r requirements.txt
 ### 4️⃣ Configure .env File
 Create `.env` file with:
 ```env
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
 DB_NAME=learning_platform
 SECRET_KEY=your_secret_key_here
 FLASK_ENV=development
@@ -122,7 +122,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ### 问题 2: MongoDB 连接失败
-- 检查 `.env` 文件的 `MONGO_URI`
+- 检查 `.env` 文件的 `MONGODB_URI`
 - 确认 MongoDB Atlas 网络访问允许你的 IP
 - 特殊字符需要 URL 编码
 
@@ -142,7 +142,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ### Issue 2: MongoDB Connection Failed
-- Check `MONGO_URI` in `.env` file
+- Check `MONGODB_URI` in `.env` file
 - Confirm MongoDB Atlas allows your IP
 - Special characters need URL encoding
 

@@ -110,7 +110,7 @@ touch .env
 
 ```env
 # MongoDB 配置
-MONGO_URI=mongodb+srv://your_username:your_password@cluster.mongodb.net/
+MONGODB_URI=mongodb+srv://your_username:your_password@cluster.mongodb.net/
 DB_NAME=learning_platform
 
 # Flask 配置
@@ -137,7 +137,7 @@ GITHUB_TOKEN=your_github_token_here
    - 创建用户并记录用户名和密码
 5. **获取连接字符串**:
    - 点击 "Connect" → "Connect your application"
-   - 复制连接字符串到 `.env` 文件的 `MONGO_URI`
+   - 复制连接字符串到 `.env` 文件的 `MONGODB_URI`
 
 ---
 
@@ -275,7 +275,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 **错误**: `ServerSelectionTimeoutError`
 
 **解决方案**:
-- 检查 `.env` 文件中的 `MONGO_URI` 是否正确
+- 检查 `.env` 文件中的 `MONGODB_URI` 是否正确
 - 确认 MongoDB Atlas 网络访问设置允许你的 IP
 - 检查用户名和密码是否正确 (密码中的特殊字符需要 URL 编码)
 
@@ -536,7 +536,7 @@ Edit `.env` file and add:
 
 ```env
 # MongoDB Configuration
-MONGO_URI=mongodb+srv://your_username:your_password@cluster.mongodb.net/
+MONGODB_URI=mongodb+srv://your_username:your_password@cluster.mongodb.net/
 DB_NAME=learning_platform
 
 # Flask Configuration
@@ -563,7 +563,7 @@ GITHUB_TOKEN=your_github_token_here
    - Create user and note username/password
 5. **Get Connection String**:
    - Click "Connect" → "Connect your application"
-   - Copy connection string to `MONGO_URI` in `.env`
+   - Copy connection string to `MONGODB_URI` in `.env`
 
 ---
 
@@ -701,7 +701,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 **Error**: `ServerSelectionTimeoutError`
 
 **Solution**:
-- Check `MONGO_URI` in `.env` file is correct
+- Check `MONGODB_URI` in `.env` file is correct
 - Verify MongoDB Atlas network access allows your IP
 - Confirm username/password are correct (special characters need URL encoding)
 
