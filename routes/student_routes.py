@@ -353,7 +353,12 @@ def view_activity(activity_id):
             hk_deadline = utc_deadline + timedelta(hours=8)
             activity['deadline_display'] = hk_deadline
         
-        # Check if student has already responded
+        # Clean all documents FIRST before processing
+        activity = clean_mongodb_document(activity)
+        course = clean_mongodb_document(course)
+        user = clean_mongodb_document(user)
+        
+        # Check if student has already responded (use cleaned activity)
         student_id = user.get('student_id')
         username = user.get('username')
         responses = activity.get('responses', [])
@@ -361,18 +366,12 @@ def view_activity(activity_id):
                                if r.get('student_id') == student_id or
                                   r.get('student_name') == username), None)
         
-        # Clean student response to remove any Undefined types
+        # Log response info
         if student_response:
-            student_response = clean_mongodb_document(student_response)
             logger.info(f"Student response found for activity {activity_id}")
             if student_response and 'ai_evaluation' in student_response:
                 ai_eval = student_response.get('ai_evaluation')
                 logger.info(f"AI evaluation type: {type(ai_eval)}, keys: {ai_eval.keys() if isinstance(ai_eval, dict) else 'N/A'}")
-        
-        # Also clean activity and course documents
-        activity = clean_mongodb_document(activity)
-        course = clean_mongodb_document(course)
-        user = clean_mongodb_document(user)
         
         return render_template('student/activity.html',
             user=user,
