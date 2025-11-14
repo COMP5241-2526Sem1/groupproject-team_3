@@ -41,8 +41,8 @@ class Activity:
         self.teacher_id = teacher_id
         self.link = self._generate_unique_link()
         self.responses = []
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.created_at = get_hk_time()
+        self.updated_at = get_hk_time()
         self.active = True
         self.ai_generated = content.get('ai_generated', False)
         self.deadline = deadline  # Optional deadline for activity completion
@@ -100,8 +100,8 @@ class Activity:
         if deadline is None:
             return False  # No deadline means never expires
         
-        # Compare with current UTC time
-        return datetime.utcnow() > deadline
+        # Compare with current Hong Kong time
+        return get_hk_time() > deadline
     
     @staticmethod
     def find_by_id(activity_id):
@@ -288,7 +288,7 @@ class Activity:
         Returns:
             bool: True if successful
         """
-        update_data['updated_at'] = datetime.utcnow()
+        update_data['updated_at'] = get_hk_time()
         result = db_service.update_one(
             Activity.COLLECTION_NAME,
             {'_id': ObjectId(activity_id)},
@@ -369,8 +369,8 @@ class Activity:
         # Update the specific response with feedback
         update_fields = {
             f'responses.{response_index}.feedback': feedback,
-            f'responses.{response_index}.feedback_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow()
+            f'responses.{response_index}.feedback_at': get_hk_time(),
+            'updated_at': get_hk_time()
         }
         
         result = db_service.update_one(

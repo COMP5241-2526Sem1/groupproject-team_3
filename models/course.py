@@ -30,8 +30,8 @@ class Course:
         self.teacher_id = teacher_id
         self.description = description
         self.students = []
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.created_at = get_hk_time()
+        self.updated_at = get_hk_time()
         self.active = True
     
     def to_dict(self):
