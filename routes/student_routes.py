@@ -313,6 +313,13 @@ def view_activity(activity_id):
                                if r.get('student_id') == student_id or
                                   r.get('student_name') == username), None)
         
+        # Debug log for AI evaluation structure
+        if student_response:
+            logger.info(f"Student response found for activity {activity_id}")
+            if 'ai_evaluation' in student_response:
+                ai_eval = student_response['ai_evaluation']
+                logger.info(f"AI evaluation type: {type(ai_eval)}, keys: {ai_eval.keys() if isinstance(ai_eval, dict) else 'N/A'}")
+        
         return render_template('student/activity.html',
             user=user,
             activity=activity,
@@ -323,9 +330,12 @@ def view_activity(activity_id):
         )
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logger.error(f"Error viewing activity: {e}")
+        logger.error(f"Traceback: {error_details}")
         return render_template('error.html', 
-            message='Failed to load activity'), 500
+            message=f'Failed to load activity: {str(e)}'), 500
 
 @student_bp.route('/my-responses')
 @student_required
