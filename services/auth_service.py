@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 from bson import ObjectId
 from services.db_service import db_service
+from utils.time_utils import get_hk_time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -111,7 +112,7 @@ class AuthService:
                 'email': email,
                 'role': role,
                 'institution': institution,
-                'created_at': datetime.utcnow(),
+                'created_at': get_hk_time(),
                 'last_login': None,
                 'active': True,
                 'enrolled_courses': []  # For students
@@ -177,7 +178,7 @@ class AuthService:
             # Update last login
             self.users_collection.update_one(
                 {'_id': user['_id']},
-                {'$set': {'last_login': datetime.utcnow()}}
+                {'$set': {'last_login': get_hk_time()}}
             )
             
             logger.info(f"User logged in successfully: {username}")

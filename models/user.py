@@ -1,4 +1,4 @@
-"""
+"""  
 User Model Module
 Defines user data structure and operations
 """
@@ -6,6 +6,7 @@ Defines user data structure and operations
 from datetime import datetime
 from bson import ObjectId
 from services.db_service import db_service
+from utils.time_utils import get_hk_time
 
 class User:
     """
@@ -33,7 +34,7 @@ class User:
         self.institution = institution
         self.password = password
         self.student_id = student_id  # Only for students
-        self.created_at = datetime.utcnow()
+        self.created_at = get_hk_time()
         self.last_login = None
         self.active = True
         self.enrolled_courses = []  # List of course IDs (for students)
