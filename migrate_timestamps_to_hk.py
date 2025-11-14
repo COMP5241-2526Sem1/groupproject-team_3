@@ -16,17 +16,28 @@ db = client[Config.DATABASE_NAME]
 HK_TZ = timezone(timedelta(hours=8))
 
 def convert_utc_to_hk(dt):
-    """Convert a naive datetime (assumed UTC) to HK timezone-aware datetime"""
+    """
+    Convert a naive UTC datetime to naive HK datetime (adds 8 hours)
+    MongoDB stores datetime as naive, so we just add 8 hours
+    """
     if dt is None:
         return None
     
-    # If already timezone-aware, convert to HK
+    # If already timezone-aware, remove timezone info but keep the HK time
     if dt.tzinfo is not None:
-        return dt.astimezone(HK_TZ)
+        # Check if it's already HK time (UTC+8)
+        offset_hours = dt.utcoffset().total_seconds() / 3600 if dt.utcoffset() else 0
+        if offset_hours == 8:
+            # Already HK time, just remove tzinfo
+            return dt.replace(tzinfo=None)
+        else:
+            # Convert to HK and remove tzinfo
+            hk_time = dt.astimezone(HK_TZ)
+            return hk_time.replace(tzinfo=None)
     
-    # If naive, assume it's UTC and convert to HK
-    utc_dt = dt.replace(tzinfo=timezone.utc)
-    return utc_dt.astimezone(HK_TZ)
+    # If naive, assume it's UTC and add 8 hours to get HK time
+    hk_time = dt + timedelta(hours=8)
+    return hk_time
 
 def migrate_collection(collection_name, timestamp_fields):
     """

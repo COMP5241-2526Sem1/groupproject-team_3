@@ -11,11 +11,18 @@ HK_TZ = timezone(timedelta(hours=8))
 def get_hk_time():
     """
     Get current time in Hong Kong timezone (UTC+8)
+    Returns naive datetime with HK time values for MongoDB storage
+    
+    MongoDB stores timezone-aware datetime as UTC, so we return naive datetime
+    with HK time values to ensure correct display.
     
     Returns:
-        datetime: Current Hong Kong time
+        datetime: Current Hong Kong time (naive, for MongoDB)
     """
-    return datetime.now(HK_TZ)
+    # Get timezone-aware HK time
+    hk_time_aware = datetime.now(HK_TZ)
+    # Return as naive datetime (MongoDB will store this as-is)
+    return hk_time_aware.replace(tzinfo=None)
 
 def utc_to_hk(utc_time):
     """
