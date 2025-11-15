@@ -69,9 +69,11 @@ class GenAIService:
 
 {teaching_content}
 
+IMPORTANT: Generate a descriptive title that summarizes the quiz topic based on the content (e.g., "Python Basics Quiz", "Database Normalization Quiz", "Machine Learning Concepts").
+
 JSON format (exactly {num_questions} questions):
 {{
-    "title": "Quiz: [Topic]",
+    "title": "[Descriptive topic-based title]",
     "questions": [
         {{
             "question": "Question?",
@@ -89,8 +91,11 @@ JSON format (exactly {num_questions} questions):
                 
                 'short_answer': f"""Create 3 questions from: {teaching_content}
 
+IMPORTANT: Generate a descriptive title based on the main topic (e.g., "Explain Data Structures", "Describe Cloud Computing").
+
 JSON format:
 {{
+    "title": "[Descriptive topic-based title]",
     "questions": [
         {{
             "question": "...",
@@ -102,9 +107,11 @@ JSON format:
                 
                 'word_cloud': f"""Create word cloud activity from: {teaching_content}
 
+IMPORTANT: Generate a descriptive title based on the topic (e.g., "Key Concepts in Networking", "Important Terms in Software Engineering").
+
 JSON format:
 {{
-    "title": "...",
+    "title": "[Descriptive topic-based title]",
     "question": "...",
     "expected_keywords": ["...", "...", "..."],
     "instructions": "..."
@@ -388,12 +395,23 @@ Return the analysis in JSON format:
         Provide fallback activity when API fails
         Manually coded fallback mechanism
         """
+        # Extract a shorter, more descriptive title from teaching content
+        # Take first 50 chars or first sentence
+        short_content = teaching_content[:50].strip()
+        if '.' in short_content:
+            short_content = short_content.split('.')[0]
+        if '\n' in short_content:
+            short_content = short_content.split('\n')[0]
+        
+        # Capitalize first letter
+        title_base = short_content[0].upper() + short_content[1:] if short_content else 'Learning Activity'
+        
         fallback = {
             'poll': {
-                'title': f'Poll: {teaching_content}',
+                'title': f'Quiz: {title_base}',
                 'questions': [
                     {
-                        'question': f'What is your current understanding level of {teaching_content}?',
+                        'question': f'What is your current understanding level of {teaching_content[:100]}?',
                         'options': [
                             {'label': 'A', 'text': 'Excellent - I understand completely'},
                             {'label': 'B', 'text': 'Good - I understand most concepts'},
@@ -409,9 +427,10 @@ Return the analysis in JSON format:
                 'note': 'Generated with fallback mechanism'
             },
             'short_answer': {
+                'title': f'Explain: {title_base}',
                 'questions': [
                     {
-                        'question': f'Explain the main concepts of {teaching_content}',
+                        'question': f'Explain the main concepts of {teaching_content[:100]}',
                         'key_points': ['Key concept 1', 'Key concept 2'],
                         'word_limit': 150
                     }
@@ -421,8 +440,8 @@ Return the analysis in JSON format:
                 'note': 'Generated with fallback mechanism'
             },
             'word_cloud': {
-                'title': f'Word Cloud: {teaching_content}',
-                'question': f'What words describe {teaching_content}?',
+                'title': f'Key Terms: {title_base}',
+                'question': f'What key terms or concepts are related to {teaching_content[:100]}?',
                 'expected_keywords': [],
                 'instructions': 'Enter keywords related to the topic',
                 'activity_type': 'word_cloud',
