@@ -144,9 +144,8 @@ def course_detail(course_id):
             # Add deadline info for teacher (info only, doesn't restrict access)
             activity['is_expired'] = Activity.is_expired(activity)
             if activity.get('deadline'):
-                utc_deadline = activity['deadline']
-                hk_deadline = utc_deadline + timedelta(hours=8)
-                activity['deadline_display'] = hk_deadline
+                # Deadline is already stored in HK time, no conversion needed
+                activity['deadline_display'] = activity['deadline']
         
         return render_template(
             'course_detail.html',
