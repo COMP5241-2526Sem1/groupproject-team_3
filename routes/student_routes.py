@@ -151,11 +151,9 @@ def dashboard():
                     # Check if activity is expired
                     is_expired = Activity.is_expired(activity)
                     
-                    # Convert deadline to HK time for display
+                    # Deadline is already stored in HK time, no conversion needed
                     if activity.get('deadline'):
-                        utc_deadline = activity['deadline']
-                        hk_deadline = utc_deadline + timedelta(hours=8)
-                        activity['deadline_display'] = hk_deadline
+                        activity['deadline_display'] = activity['deadline']
                     
                     if is_completed:
                         course_completed += 1
@@ -237,12 +235,11 @@ def course_detail(course_id):
             activity['student_response'] = student_response
             activity['has_responded'] = student_response is not None
             
-            # Check if activity is expired and convert deadline to HK time
+            # Check if activity is expired
             activity['is_expired'] = Activity.is_expired(activity)
             if activity.get('deadline'):
-                utc_deadline = activity['deadline']
-                hk_deadline = utc_deadline + timedelta(hours=8)
-                activity['deadline_display'] = hk_deadline
+                # Deadline is already stored in HK time, no conversion needed
+                activity['deadline_display'] = activity['deadline']
         
         # Get teacher info
         teacher = User.find_by_id(course.get('teacher_id'))
@@ -373,12 +370,9 @@ def view_activity(activity_id):
         # Check if activity has expired
         is_expired = Activity.is_expired(activity)
         
-        # Convert deadline from UTC to Hong Kong time (UTC+8) for display
+        # Deadline is already stored in HK time, no conversion needed for display
         if activity.get('deadline'):
-            from datetime import timedelta
-            utc_deadline = activity['deadline']
-            hk_deadline = utc_deadline + timedelta(hours=8)
-            activity['deadline_display'] = hk_deadline
+            activity['deadline_display'] = activity['deadline']
         
         # Clean all documents FIRST before processing
         activity = clean_mongodb_document(activity)
@@ -574,12 +568,11 @@ def my_activities():
                 student_response = next((r for r in responses 
                                        if r.get('student_id') == user.get('student_id')), None)
                 
-                # Check if expired and convert deadline to HK time
+                # Check if expired
                 is_expired = Activity.is_expired(activity)
                 if activity.get('deadline'):
-                    utc_deadline = activity['deadline']
-                    hk_deadline = utc_deadline + timedelta(hours=8)
-                    activity['deadline_display'] = hk_deadline
+                    # Deadline is already stored in HK time, no conversion needed
+                    activity['deadline_display'] = activity['deadline']
                 
                 activity['course_name'] = course.get('name')
                 activity['course_code'] = course.get('code')

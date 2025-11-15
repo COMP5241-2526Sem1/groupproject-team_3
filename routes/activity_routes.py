@@ -423,9 +423,8 @@ def activity_detail(activity_id):
         is_expired = Activity.is_expired(activity)
         deadline_display = None
         if activity.get('deadline'):
-            utc_deadline = activity['deadline']
-            hk_deadline = utc_deadline + timedelta(hours=8)
-            deadline_display = hk_deadline
+            # Deadline is already stored in HK time, no conversion needed
+            deadline_display = activity['deadline']
         
         print("DEBUG: Rendering template...")
         return render_template(
