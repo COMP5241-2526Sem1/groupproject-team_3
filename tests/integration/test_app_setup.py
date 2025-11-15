@@ -1,38 +1,17 @@
 import pytest
-import sys
-from pathlib import Path
-
-# Add project root to Python path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
-from app import app
-
-@pytest.fixture
-def client():
-    """Create a test client for the Flask application"""
-    app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for testing
-    with app.test_client() as client:
-        yield client
-
-@pytest.fixture
-def runner():
-    """Create a test runner for the Flask application"""
-    return app.test_cli_runner()
 
 class TestAppConfiguration:
     """Test Flask application configuration"""
     
-    def test_app_exists(self):
+    def test_app_exists(self, app):
         """Test that Flask app exists"""
         assert app is not None
     
-    def test_app_is_testing(self, client):
+    def test_app_is_testing(self, app):
         """Test that app is in testing mode"""
         assert app.config['TESTING'] == True
     
-    def test_app_has_secret_key(self):
+    def test_app_has_secret_key(self, app):
         """Test that app has a secret key configured"""
         assert app.config.get('SECRET_KEY') is not None
 
