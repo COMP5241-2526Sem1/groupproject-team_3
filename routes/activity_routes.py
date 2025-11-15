@@ -135,17 +135,12 @@ def create_activity():
         if deadline_str:
             try:
                 # Convert from local datetime string to datetime object
-                from datetime import datetime, timezone
+                from datetime import datetime
                 # Parse the ISO format datetime (comes from datetime-local input)
-                local_deadline = datetime.fromisoformat(deadline_str)
+                # Input is already in Hong Kong time, store as-is (naive datetime)
+                deadline = datetime.fromisoformat(deadline_str)
                 
-                # Assume the input is in Hong Kong timezone (UTC+8)
-                # Convert to UTC for storage
-                from datetime import timedelta
-                hk_offset = timedelta(hours=8)
-                deadline = local_deadline - hk_offset
-                
-                logger.info(f"Deadline input (HK time): {local_deadline}, Stored (UTC): {deadline}")
+                logger.info(f"Deadline input (HK time): {deadline}, Stored (HK time): {deadline}")
             except ValueError as e:
                 logger.error(f"Deadline parse error: {e}, Input: {deadline_str}")
                 return jsonify({
